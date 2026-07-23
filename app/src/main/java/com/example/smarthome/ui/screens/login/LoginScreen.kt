@@ -71,7 +71,7 @@ fun LoginScreen(
                 .padding(30.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(320.dp))
+            Spacer(modifier = Modifier.height(420.dp))
 
 
             Card(
@@ -134,7 +134,7 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Text(
-                        text = "Demo: any email & password",
+                        text = "Demo: Forgot Password?",
                         color = WarmBrown.copy(alpha = 0.7f),
                         fontSize = 12.sp,
                         modifier = Modifier.align(Alignment.Start)
@@ -159,6 +159,12 @@ fun LoginScreen(
                             Text("Login", fontSize = 18.sp)
                         }
                     }
+                    Text(
+                        text = "Don't have an account?",
+                        color = WarmBrown.copy(alpha = 0.7f),
+                        fontSize = 12.sp,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
                 }
             }
         }
