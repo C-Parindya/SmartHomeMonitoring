@@ -73,12 +73,6 @@ fun LoginScreen(
         ) {
             Spacer(modifier = Modifier.height(320.dp))
 
-            Text(
-                text = "SCS 3311 Smart Home",
-                color = Color.White,
-                fontSize = 26.sp,
-                modifier = Modifier.padding(bottom = 16.dp)
-            )
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
