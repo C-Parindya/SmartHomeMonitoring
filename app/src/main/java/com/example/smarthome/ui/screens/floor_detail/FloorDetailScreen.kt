@@ -25,6 +25,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.smarthome.data.model.Device
 import com.example.smarthome.data.model.DeviceState
+import com.example.smarthome.data.repository.MockSmartHomeRepository
 import com.example.smarthome.ui.components.DeviceGridCell
 import com.example.smarthome.ui.components.EmptyState
 import com.example.smarthome.ui.components.LoadingState
@@ -38,7 +39,7 @@ fun FloorDetailScreen(
     onBack: () -> Unit,
     onDeviceClick: (Device) -> Unit,
     viewModel: FloorDetailViewModel = viewModel(
-        factory = FloorDetailViewModel.factory(floorId)
+        factory = FloorDetailViewModel.factory(floorId, MockSmartHomeRepository.instance)
     )
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
