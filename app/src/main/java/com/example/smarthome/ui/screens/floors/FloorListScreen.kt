@@ -1,5 +1,6 @@
 package com.example.smarthome.ui.screens.floors
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -133,7 +134,10 @@ private fun FloorCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(onClick = {
+                Log.d("FloorCard", "Floor clicked: ${floor.name} (id=${floor.id})")
+                onClick()
+            }),
         elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface

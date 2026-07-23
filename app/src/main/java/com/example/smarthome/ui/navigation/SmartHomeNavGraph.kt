@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import android.util.Log
 import com.example.smarthome.data.model.Device
 import com.example.smarthome.data.repository.MockSmartHomeRepository
 import com.example.smarthome.ui.screens.device.CameraViewScreen
@@ -51,7 +52,10 @@ fun SmartHomeNavGraph(
         composable(Screen.FloorList.route) {
             FloorListScreen(
                 onFloorClick = { floorId ->
-                    navController.navigate(Screen.FloorDetail.createRoute(floorId))
+                    Log.d("SmartHomeNavGraph", "onFloorClick: navigating to FloorDetail with floorId=$floorId")
+                    val route = Screen.FloorDetail.createRoute(floorId)
+                    Log.d("SmartHomeNavGraph", "Generated route: $route")
+                    navController.navigate(route)
                 },
                 onUsageReportClick = {
                     navController.navigate(Screen.UsageReport.route)
@@ -68,6 +72,7 @@ fun SmartHomeNavGraph(
             arguments = listOf(navArgument("floorId") { type = NavType.StringType })
         ) { backStackEntry ->
             val floorId = backStackEntry.arguments?.getString("floorId") ?: ""
+            Log.d("SmartHomeNavGraph", "FloorDetail screen: floorId=$floorId")
             FloorDetailScreen(
                 floorId = floorId,
                 onBack = { navController.popBackStack() },

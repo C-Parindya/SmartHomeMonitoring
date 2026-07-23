@@ -1,5 +1,6 @@
 package com.example.smarthome.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
@@ -25,13 +26,17 @@ class FloorDetailViewModel(
     val uiState: StateFlow<FloorDetailUiState> = _uiState.asStateFlow()
 
     init {
+        Log.d("FloorDetailVM", "Init started with floorId=$floorId")
         viewModelScope.launch {
             try {
                 repository.floors.collect { floors ->
+                    Log.d("FloorDetailVM", "Floors received: ${floors.size} floors")
                     val floor = floors.find { it.id == floorId }
+                    Log.d("FloorDetailVM", "Found floor: ${floor?.name} (id=$floorId)")
                     _uiState.update { it.copy(floor = floor, isLoading = false) }
                 }
             } catch (e: Exception) {
+                Log.e("FloorDetailVM", "Error collecting floors", e)
                 // Handle error and show "floor not found"
                 _uiState.update { it.copy(floor = null, isLoading = false) }
             }
