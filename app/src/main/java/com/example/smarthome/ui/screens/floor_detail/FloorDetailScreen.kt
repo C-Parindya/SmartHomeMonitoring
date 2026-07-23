@@ -37,7 +37,9 @@ fun FloorDetailScreen(
     floorId: String,
     onBack: () -> Unit,
     onDeviceClick: (Device) -> Unit,
-    viewModel: FloorDetailViewModel
+    viewModel: FloorDetailViewModel = viewModel(
+        factory = FloorDetailViewModel.factory(floorId)
+    )
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 

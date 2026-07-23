@@ -26,9 +26,14 @@ class FloorDetailViewModel(
 
     init {
         viewModelScope.launch {
-            repository.floors.collect { floors ->
-                val floor = floors.find { it.id == floorId }
-                _uiState.update { it.copy(floor = floor, isLoading = false) }
+            try {
+                repository.floors.collect { floors ->
+                    val floor = floors.find { it.id == floorId }
+                    _uiState.update { it.copy(floor = floor, isLoading = false) }
+                }
+            } catch (e: Exception) {
+                // Handle error and show "floor not found"
+                _uiState.update { it.copy(floor = null, isLoading = false) }
             }
         }
     }
