@@ -68,7 +68,11 @@ fun FloorListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = viewModel::showAddDialog) {
+            FloatingActionButton(
+                onClick = viewModel::showAddDialog,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
                 Icon(Icons.Default.Add, contentDescription = "Add floor")
             }
         }
@@ -76,7 +80,7 @@ fun FloorListScreen(
         if (uiState.floors.isEmpty()) {
             EmptyState(
                 title = "No floors yet",
-                message = "Tap + to add your first floor",
+                message = "Tap + to add your floor",
                 icon = Icons.Outlined.Layers,
                 modifier = Modifier.padding(padding)
             )

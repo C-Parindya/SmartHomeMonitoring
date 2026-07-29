@@ -118,26 +118,27 @@ private fun FloorPlanGrid(
     onDeviceClick: (Device) -> Unit
 ) {
     val deviceMap = floor.devices.associateBy { it.row to it.col }
-    val cells = buildList {
-        for (row in 0 until floor.gridRows) {
-            for (col in 0 until floor.gridCols) {
-                add(row to col)
-            }
-        }
-    }
-
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(floor.gridCols),
+    
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        userScrollEnabled = false
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        items(cells) { (row, col) ->
-            DeviceGridCell(
-                device = deviceMap[row to col],
-                onClick = onDeviceClick
-            )
+        for (row in 0 until floor.gridRows) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                for (col in 0 until floor.gridCols) {
+                    androidx.compose.foundation.layout.Box(
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        DeviceGridCell(
+                            device = deviceMap[row to col],
+                            onClick = onDeviceClick
+                        )
+                    }
+                }
+            }
         }
     }
 }
