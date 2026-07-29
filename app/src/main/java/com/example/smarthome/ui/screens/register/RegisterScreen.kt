@@ -1,31 +1,14 @@
-package com.example.smarthome.ui.screens.login
+package com.example.smarthome.ui.screens.register
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,21 +24,20 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.smarthome.R
 import com.example.smarthome.ui.theme.WarmBrown
 import com.example.smarthome.ui.theme.WarmBrownLight
-import com.example.smarthome.viewmodel.LoginViewModel
-import androidx.compose.foundation.layout.Box
+import com.example.smarthome.viewmodel.RegisterViewModel
 
 @Composable
-fun LoginScreen(
-    onLoginSuccess: () -> Unit,
-    onNavigateToRegister: () -> Unit,
-    viewModel: LoginViewModel = viewModel()
+fun RegisterScreen(
+    onRegisterSuccess: () -> Unit,
+    onBackToLogin: () -> Unit,
+    viewModel: RegisterViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(uiState.loginSuccess) {
-        if (uiState.loginSuccess) {
-            viewModel.consumeLoginSuccess()
-            onLoginSuccess()
+    LaunchedEffect(uiState.registerSuccess) {
+        if (uiState.registerSuccess) {
+            viewModel.consumeRegisterSuccess()
+            onRegisterSuccess()
         }
     }
 
@@ -73,8 +55,7 @@ fun LoginScreen(
                 .padding(30.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(420.dp))
-
+            Spacer(modifier = Modifier.height(300.dp))
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -84,25 +65,44 @@ fun LoginScreen(
                 elevation = CardDefaults.cardElevation(defaultElevation = 10.dp)
             ) {
                 Column(modifier = Modifier.padding(25.dp)) {
+                    Text(
+                        text = "Create Account",
+                        fontSize = 24.sp,
+                        color = WarmBrown,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    OutlinedTextField(
+                        value = uiState.displayName,
+                        onValueChange = viewModel::onDisplayNameChange,
+                        label = { Text("Display Name") },
+                        shape = RoundedCornerShape(10.dp),
+                        colors = registerFieldColors(),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
                     OutlinedTextField(
                         value = uiState.email,
                         onValueChange = viewModel::onEmailChange,
                         label = { Text("Email") },
                         shape = RoundedCornerShape(10.dp),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        colors = loginFieldColors(),
+                        colors = registerFieldColors(),
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
 
-                    Spacer(modifier = Modifier.height(15.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     OutlinedTextField(
                         value = uiState.password,
                         onValueChange = viewModel::onPasswordChange,
                         label = { Text("Password") },
                         modifier = Modifier.fillMaxWidth(),
-                        colors = loginFieldColors(),
+                        colors = registerFieldColors(),
                         shape = RoundedCornerShape(10.dp),
                         visualTransformation = if (uiState.passwordVisible) {
                             VisualTransformation.None
@@ -124,6 +124,23 @@ fun LoginScreen(
                         singleLine = true
                     )
 
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    OutlinedTextField(
+                        value = uiState.confirmPassword,
+                        onValueChange = viewModel::onConfirmPasswordChange,
+                        label = { Text("Confirm Password") },
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = registerFieldColors(),
+                        shape = RoundedCornerShape(10.dp),
+                        visualTransformation = if (uiState.passwordVisible) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
+                        singleLine = true
+                    )
+
                     uiState.errorMessage?.let { error ->
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -133,19 +150,10 @@ fun LoginScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(
-                        text = "Demo: Forgot Password?",
-                        color = WarmBrown.copy(alpha = 0.7f),
-                        fontSize = 12.sp,
-                        modifier = Modifier.align(Alignment.Start)
-                    )
-
                     Spacer(modifier = Modifier.height(20.dp))
 
                     Button(
-                        onClick = viewModel::login,
+                        onClick = viewModel::register,
                         enabled = !uiState.isLoading,
                         modifier = Modifier
                             .fillMaxWidth()
@@ -158,18 +166,18 @@ fun LoginScreen(
                                 modifier = Modifier.height(24.dp)
                             )
                         } else {
-                            Text("Login", fontSize = 18.sp)
+                            Text("Register", fontSize = 18.sp)
                         }
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
 
                     TextButton(
-                        onClick = onNavigateToRegister,
+                        onClick = onBackToLogin,
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     ) {
                         Text(
-                            text = "Don't have an account? Register",
+                            text = "Already have an account? Login",
                             color = WarmBrown.copy(alpha = 0.8f)
                         )
                     }
@@ -180,7 +188,7 @@ fun LoginScreen(
 }
 
 @Composable
-private fun loginFieldColors() = OutlinedTextFieldDefaults.colors(
+private fun registerFieldColors() = OutlinedTextFieldDefaults.colors(
     unfocusedBorderColor = Color.White.copy(alpha = 0.8f),
     focusedBorderColor = WarmBrownLight,
     unfocusedContainerColor = Color.White.copy(alpha = 0.5f),

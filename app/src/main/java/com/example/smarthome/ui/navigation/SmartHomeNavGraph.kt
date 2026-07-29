@@ -18,6 +18,7 @@ import com.example.smarthome.ui.screens.device.ScheduledControlScreen
 import com.example.smarthome.ui.screens.floor_detail.FloorDetailScreen
 import com.example.smarthome.ui.screens.floors.FloorListScreen
 import com.example.smarthome.ui.screens.login.LoginScreen
+import com.example.smarthome.ui.screens.register.RegisterScreen
 import com.example.smarthome.ui.screens.report.UsageReportScreen
 import com.example.smarthome.ui.screens.settings.SettingsScreen
 import com.example.smarthome.viewmodel.DeviceControlViewModel
@@ -43,6 +44,23 @@ fun SmartHomeNavGraph(
                     navController.navigate(Screen.FloorList.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
+                },
+                onNavigateToRegister = {
+                    navController.navigate(Screen.Register.route)
+                },
+                viewModel = viewModel(factory = viewModelFactory)
+            )
+        }
+
+        composable(Screen.Register.route) {
+            RegisterScreen(
+                onRegisterSuccess = {
+                    navController.navigate(Screen.FloorList.route) {
+                        popUpTo(Screen.Login.route) { inclusive = true }
+                    }
+                },
+                onBackToLogin = {
+                    navController.popBackStack()
                 },
                 viewModel = viewModel(factory = viewModelFactory)
             )

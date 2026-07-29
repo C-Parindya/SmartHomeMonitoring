@@ -2,6 +2,7 @@ package com.example.smarthome.ui.navigation
 
 sealed class Screen(val route: String) {
     data object Login : Screen("login")
+    data object Register : Screen("register")
     data object FloorList : Screen("floor_list")
     data object UsageReport : Screen("usage_report")
     data object Settings : Screen("settings")
