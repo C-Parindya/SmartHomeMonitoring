@@ -12,8 +12,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.tasks.await
 
 class MockSmartHomeRepository {
+    private val auth = FirebaseAuth.getInstance()
 
     private val _currentUser = MutableStateFlow<UserProfile?>(null)
     val currentUser: StateFlow<UserProfile?> = _currentUser.asStateFlow()
@@ -27,23 +30,55 @@ class MockSmartHomeRepository {
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
-    suspend fun login(email: String, password: String): Result<UserProfile> {
+
+        suspend fun login(email: String, password: String): Result<UserProfile> {
+            _isLoading.value = true
+
+            return try {
+                auth.signInWithEmailAndPassword(email.trim(), password).await()
+
+                val firebaseUser = auth.currentUser!!
+
+                val user = UserProfile(
+                    email = firebaseUser.email ?: "",
+                    displayName = firebaseUser.displayName
+                        ?: firebaseUser.email!!.substringBefore("@")
+                )
+
+                _currentUser.value = user
+                _isLoading.value = false
+
+                Result.success(user)
+
+            } catch (e: Exception) {
+                _isLoading.value = false
+                Result.failure(e)
+            }
+        }
+
+    suspend fun register(email: String, password: String, displayName: String): Result<UserProfile> {
         _isLoading.value = true
-        delay(800)
-        _isLoading.value = false
-        return if (email.isNotBlank() && password.isNotBlank()) {
+        return try {
+            auth.createUserWithEmailAndPassword(email.trim(), password).await()
+            val firebaseUser = auth.currentUser!!
+
             val user = UserProfile(
-                email = email.trim(),
-                displayName = email.substringBefore("@").replaceFirstChar { it.uppercase() }
+                email = firebaseUser.email ?: "",
+                displayName = displayName.ifBlank { firebaseUser.email!!.substringBefore("@") }
             )
+
             _currentUser.value = user
+            _isLoading.value = false
             Result.success(user)
-        } else {
-            Result.failure(IllegalArgumentException("Email and password are required"))
+        } catch (e: Exception) {
+            _isLoading.value = false
+            Result.failure(e)
         }
     }
 
+
     fun logout() {
+        FirebaseAuth.getInstance().signOut()
         _currentUser.value = null
     }
 
