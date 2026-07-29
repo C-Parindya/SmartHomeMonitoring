@@ -11,6 +11,10 @@ sealed class Screen(val route: String) {
         fun createRoute(floorId: String) = "floor_detail/$floorId"
     }
 
+    data object AreaDetail : Screen("area_detail/{floorId}/{areaId}") {
+        fun createRoute(floorId: String, areaId: String) = "area_detail/$floorId/$areaId"
+    }
+
     data object OutletControl : Screen("device/outlet/{deviceId}") {
         fun createRoute(deviceId: String) = "device/outlet/$deviceId"
     }

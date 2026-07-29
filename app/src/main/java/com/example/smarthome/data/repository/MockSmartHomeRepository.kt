@@ -1,5 +1,6 @@
 package com.example.smarthome.data.repository
 
+import com.example.smarthome.data.model.Area
 import com.example.smarthome.data.model.Device
 import com.example.smarthome.data.model.DeviceState
 import com.example.smarthome.data.model.Floor
@@ -109,6 +110,7 @@ class MockSmartHomeRepository {
 
     fun getDevice(deviceId: String): Device? {
         return floors.value
+            .flatMap { it.areas }
             .flatMap { it.devices }
             .find { it.id == deviceId }
     }
@@ -136,8 +138,41 @@ class MockSmartHomeRepository {
             }
     }
 
+    fun addArea(floorId: String, name: String, type: String) {
+        val trimmed = name.trim()
+        if (trimmed.isEmpty()) return
+        val userId = auth.currentUser?.uid ?: return
+        
+        val floor = floors.value.find { it.id == floorId } ?: return
+        val updatedAreas = floor.areas + Area(
+            id = "area_${System.currentTimeMillis()}",
+            name = trimmed,
+            floorId = floorId,
+            type = type
+        )
+        
+        val updatedFloor = floor.copy(areas = updatedAreas)
+        database.getReference("users/$userId/floors/$floorId").setValue(updatedFloor)
+    }
+
+    fun addDeviceToArea(floorId: String, areaId: String, device: Device) {
+        val userId = auth.currentUser?.uid ?: return
+        val floor = floors.value.find { it.id == floorId } ?: return
+        
+        val updatedAreas = floor.areas.map { 
+            if (it.id == areaId) {
+                it.copy(devices = it.devices + device)
+            } else {
+                it
+            }
+        }
+        
+        val updatedFloor = floor.copy(areas = updatedAreas)
+        database.getReference("users/$userId/floors/$floorId").setValue(updatedFloor)
+    }
+
     fun toggleOutlet(deviceId: String) {
-        updateDevice<Device.Outlet>(deviceId) { device ->
+        updateDevice(deviceId) { device ->
             if (!device.state.isControllable) return@updateDevice device
             val newState = if (device.state == DeviceState.ON) DeviceState.OFF else DeviceState.ON
             device.copy(state = newState)
@@ -145,7 +180,7 @@ class MockSmartHomeRepository {
     }
 
     fun toggleSwitch(deviceId: String, switchId: String) {
-        updateDevice<Device.MultiSwitch>(deviceId) { device ->
+        updateDevice(deviceId) { device ->
             if (!device.state.isControllable) return@updateDevice device
             val updatedSwitches = device.switches.map { switch ->
                 if (switch.id == switchId) switch.copy(isOn = !switch.isOn) else switch
@@ -159,7 +194,7 @@ class MockSmartHomeRepository {
     }
 
     fun toggleScheduledDevice(deviceId: String) {
-        updateDevice<Device.ScheduledDevice>(deviceId) { device ->
+        updateDevice(deviceId) { device ->
             if (!device.state.isControllable) return@updateDevice device
             val newState = if (device.state == DeviceState.ON) DeviceState.OFF else DeviceState.ON
             device.copy(state = newState)
@@ -172,7 +207,7 @@ class MockSmartHomeRepository {
         onTime: String?,
         offTime: String?
     ) {
-        updateDevice<Device.ScheduledDevice>(deviceId) { device ->
+        updateDevice(deviceId) { device ->
             device.copy(
                 maxDurationMinutes = maxDurationMinutes.coerceIn(1, 480),
                 onTime = onTime,
@@ -182,33 +217,40 @@ class MockSmartHomeRepository {
     }
 
     fun toggleCameraStream(deviceId: String) {
-        updateDevice<Device.Camera>(deviceId) { device ->
+        updateDevice(deviceId) { device ->
             if (device.state == DeviceState.DISCONNECTED) return@updateDevice device
             device.copy(isStreaming = !device.isStreaming)
         }
     }
 
-    private inline fun <reified T : Device> updateDevice(
+    private fun updateDevice(
         deviceId: String,
-        crossinline transform: (T) -> T
+        transform: (Device) -> Device
     ) {
         val userId = auth.currentUser?.uid ?: return
         val currentFloors = floors.value
         
-        val updatedFloors = currentFloors.map { floor ->
-            val updatedDevices = floor.devices.map { device ->
-                if (device.id == deviceId && device is T) {
-                    transform(device)
+        var floorToUpdate: Floor? = null
+        
+        currentFloors.forEach { floor ->
+            val updatedAreas = floor.areas.map { area ->
+                val updatedDevices = area.devices.map { device ->
+                    if (device.id == deviceId) {
+                        transform(device)
+                    } else {
+                        device
+                    }
+                }
+                if (updatedDevices != area.devices) {
+                    area.copy(devices = updatedDevices)
                 } else {
-                    device
+                    area
                 }
             }
-            floor.copy(devices = updatedDevices)
-        }
-        
-        // Find which floor was actually updated and only update that child in Firebase
-        val floorToUpdate = updatedFloors.find { floor ->
-            floor.devices.any { it.id == deviceId }
+            
+            if (updatedAreas != floor.areas) {
+                floorToUpdate = floor.copy(areas = updatedAreas)
+            }
         }
         
         floorToUpdate?.let {

@@ -10,17 +10,20 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.smarthome.data.model.Device
+import com.example.smarthome.data.model.DeviceType
 import com.example.smarthome.data.repository.MockSmartHomeRepository
 import com.example.smarthome.ui.screens.device.CameraViewScreen
 import com.example.smarthome.ui.screens.device.MultiSwitchControlScreen
 import com.example.smarthome.ui.screens.device.OutletControlScreen
 import com.example.smarthome.ui.screens.device.ScheduledControlScreen
+import com.example.smarthome.ui.screens.area_detail.AreaDetailScreen
 import com.example.smarthome.ui.screens.floor_detail.FloorDetailScreen
 import com.example.smarthome.ui.screens.floors.FloorListScreen
 import com.example.smarthome.ui.screens.login.LoginScreen
 import com.example.smarthome.ui.screens.register.RegisterScreen
 import com.example.smarthome.ui.screens.report.UsageReportScreen
 import com.example.smarthome.ui.screens.settings.SettingsScreen
+import com.example.smarthome.viewmodel.AreaDetailViewModel
 import com.example.smarthome.viewmodel.DeviceControlViewModel
 import com.example.smarthome.viewmodel.FloorDetailViewModel
 import com.example.smarthome.viewmodel.SmartHomeViewModelFactory
@@ -89,9 +92,31 @@ fun SmartHomeNavGraph(
             FloorDetailScreen(
                 floorId = floorId,
                 onBack = { navController.popBackStack() },
-                onDeviceClick = { device -> navigateToDevice(navController, device) },
+                onAreaClick = { fId, areaId ->
+                    navController.navigate(Screen.AreaDetail.createRoute(fId, areaId))
+                },
                 viewModel = viewModel(
                     factory = FloorDetailViewModel.factory(floorId, repository)
+                )
+            )
+        }
+
+        composable(
+            route = Screen.AreaDetail.route,
+            arguments = listOf(
+                navArgument("floorId") { type = NavType.StringType },
+                navArgument("areaId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val floorId = backStackEntry.arguments?.getString("floorId").orEmpty()
+            val areaId = backStackEntry.arguments?.getString("areaId").orEmpty()
+            AreaDetailScreen(
+                floorId = floorId,
+                areaId = areaId,
+                onBack = { navController.popBackStack() },
+                onDeviceClick = { device -> navigateToDevice(navController, device) },
+                viewModel = viewModel(
+                    factory = AreaDetailViewModel.factory(floorId, areaId, repository)
                 )
             )
         }
@@ -175,11 +200,11 @@ fun SmartHomeNavGraph(
 }
 
 private fun navigateToDevice(navController: NavHostController, device: Device) {
-    val route = when (device) {
-        is Device.Outlet -> Screen.OutletControl.createRoute(device.id)
-        is Device.MultiSwitch -> Screen.MultiSwitchControl.createRoute(device.id)
-        is Device.ScheduledDevice -> Screen.ScheduledControl.createRoute(device.id)
-        is Device.Camera -> Screen.CameraView.createRoute(device.id)
+    val route = when (device.type) {
+        DeviceType.OUTLET -> Screen.OutletControl.createRoute(device.id)
+        DeviceType.MULTI_SWITCH -> Screen.MultiSwitchControl.createRoute(device.id)
+        DeviceType.SCHEDULED_DEVICE -> Screen.ScheduledControl.createRoute(device.id)
+        DeviceType.CAMERA -> Screen.CameraView.createRoute(device.id)
     }
     navController.navigate(route)
 }
