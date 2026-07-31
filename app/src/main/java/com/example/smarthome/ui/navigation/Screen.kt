@@ -3,9 +3,15 @@ package com.example.smarthome.ui.navigation
 sealed class Screen(val route: String) {
     data object Login : Screen("login")
     data object Register : Screen("register")
-    data object FloorList : Screen("floor_list")
+    data object Main : Screen("main")
+    data object Home : Screen("home")
+    data object FloorMap : Screen("floor_map")
+    data object AddFloor : Screen("add_floor")
+    data object Notification : Screen("notification")
+    data object Profile : Screen("profile")
+
+    data object FloorList : Screen("floor_list") // Keep for now if needed or alias to Home
     data object UsageReport : Screen("usage_report")
-    data object Settings : Screen("settings")
 
     data object FloorDetail : Screen("floor_detail/{floorId}") {
         fun createRoute(floorId: String) = "floor_detail/$floorId"

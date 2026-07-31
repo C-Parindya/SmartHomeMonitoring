@@ -11,6 +11,7 @@ val LightBrown = Color(0xFFA1887F)
 val PaleBrown = Color(0xFFBCAAA4)
 val SandBrown = Color(0xFFD7CCC8)
 val CreamBrown = Color(0xFFEFEBE9)
+val NavColor = Color(0xFFD0B29A)
 
 // Theme Mappings
 val WarmBrownDark = DarkBrown

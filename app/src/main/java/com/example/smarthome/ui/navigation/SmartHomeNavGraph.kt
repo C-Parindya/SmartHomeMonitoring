@@ -18,15 +18,16 @@ import com.example.smarthome.ui.screens.device.OutletControlScreen
 import com.example.smarthome.ui.screens.device.ScheduledControlScreen
 import com.example.smarthome.ui.screens.area_detail.AreaDetailScreen
 import com.example.smarthome.ui.screens.floor_detail.FloorDetailScreen
-import com.example.smarthome.ui.screens.floors.FloorListScreen
 import com.example.smarthome.ui.screens.login.LoginScreen
 import com.example.smarthome.ui.screens.register.RegisterScreen
 import com.example.smarthome.ui.screens.report.UsageReportScreen
-import com.example.smarthome.ui.screens.settings.SettingsScreen
 import com.example.smarthome.viewmodel.AreaDetailViewModel
 import com.example.smarthome.viewmodel.DeviceControlViewModel
 import com.example.smarthome.viewmodel.FloorDetailViewModel
 import com.example.smarthome.viewmodel.SmartHomeViewModelFactory
+
+import com.example.smarthome.ui.screens.MainScreen
+import com.example.smarthome.ui.screens.settings.ProfileScreen
 
 @Composable
 fun SmartHomeNavGraph(
@@ -44,7 +45,7 @@ fun SmartHomeNavGraph(
         composable(Screen.Login.route) {
             LoginScreen(
                 onLoginSuccess = {
-                    navController.navigate(Screen.FloorList.route) {
+                    navController.navigate(Screen.Main.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 },
@@ -58,7 +59,7 @@ fun SmartHomeNavGraph(
         composable(Screen.Register.route) {
             RegisterScreen(
                 onRegisterSuccess = {
-                    navController.navigate(Screen.FloorList.route) {
+                    navController.navigate(Screen.Main.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 },
@@ -69,19 +70,29 @@ fun SmartHomeNavGraph(
             )
         }
 
-        composable(Screen.FloorList.route) {
-            FloorListScreen(
-                onFloorClick = { floorId ->
+        composable(Screen.Main.route) {
+            MainScreen(
+                repository = repository,
+                onLogout = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToFloorDetail = { floorId ->
                     navController.navigate(Screen.FloorDetail.createRoute(floorId))
                 },
-                onUsageReportClick = {
+                onNavigateToUsageReport = {
                     navController.navigate(Screen.UsageReport.route)
-                },
-                onSettingsClick = {
-                    navController.navigate(Screen.Settings.route)
-                },
-                viewModel = viewModel(factory = viewModelFactory)
+                }
             )
+        }
+
+        composable(Screen.FloorList.route) {
+            // This is now handled within MainScreen, but we can keep it as an alias or redirect
+            navController.navigate(Screen.Main.route) {
+                popUpTo(Screen.FloorList.route) { inclusive = true }
+            }
         }
 
         composable(
@@ -128,18 +139,6 @@ fun SmartHomeNavGraph(
             )
         }
 
-        composable(Screen.Settings.route) {
-            SettingsScreen(
-                onBack = { navController.popBackStack() },
-                onLogout = {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(navController.graph.id) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
-                viewModel = viewModel(factory = viewModelFactory)
-            )
-        }
 
         composable(
             route = Screen.OutletControl.route,
