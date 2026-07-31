@@ -44,7 +44,7 @@ fun ScheduledControlScreen(
     viewModel: DeviceControlViewModel = viewModel(factory = DeviceControlViewModel.factory(deviceId))
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val device = uiState.device as? Device.ScheduledDevice
+    val device = uiState.device
 
     Scaffold(
         topBar = {
@@ -73,7 +73,7 @@ fun ScheduledControlScreen(
 
 @Composable
 private fun ScheduledControlContent(
-    device: Device.ScheduledDevice,
+    device: Device,
     onToggle: () -> Unit,
     onSaveSchedule: (Int, String?, String?) -> Unit,
     modifier: Modifier = Modifier

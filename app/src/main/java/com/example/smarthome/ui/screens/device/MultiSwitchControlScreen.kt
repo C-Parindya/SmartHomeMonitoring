@@ -33,7 +33,7 @@ fun MultiSwitchControlScreen(
     viewModel: DeviceControlViewModel = viewModel(factory = DeviceControlViewModel.factory(deviceId))
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val device = uiState.device as? Device.MultiSwitch
+    val device = uiState.device
 
     Scaffold(
         topBar = {
@@ -61,7 +61,7 @@ fun MultiSwitchControlScreen(
 
 @Composable
 private fun MultiSwitchContent(
-    device: Device.MultiSwitch,
+    device: Device,
     onToggleSwitch: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {

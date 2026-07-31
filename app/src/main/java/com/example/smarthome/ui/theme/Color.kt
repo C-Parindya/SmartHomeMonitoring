@@ -2,26 +2,27 @@ package com.example.smarthome.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+// Primary Brown Shades
+val DarkBrown = Color(0xFF3E2723)
+val WarmBrown = Color(0xFF5D4037)
+val MediumBrown = Color(0xFF795548)
+val SoftBrown = Color(0xFF8D6E63)
+val LightBrown = Color(0xFFA1887F)
+val PaleBrown = Color(0xFFBCAAA4)
+val SandBrown = Color(0xFFD7CCC8)
+val CreamBrown = Color(0xFFEFEBE9)
+val NavColor = Color(0xFFD0B29A)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+// Theme Mappings
+val WarmBrownDark = DarkBrown
+val WarmBrownLight = PaleBrown
 
-val WarmBrown = Color(0xFFA97A50)
-val WarmBrownDark = Color(0xFF8B6340)
-val WarmBrownLight = Color(0xFFB8865B)
-val DeviceOn = Color(0xFF4CAF50)
-val DeviceOff = Color(0xFF9E9E9E)
-val DeviceError = Color(0xFFE53935)
-val DeviceDisconnected = Color(0xFFFF9800)
+// Status Colors (Brown-toned for consistency)
+val DeviceOn = Color(0xFF6D4C41)      // Saturated Brown
+val DeviceOff = Color(0xFFBCAAA4)     // Muted Brown
+val DeviceError = Color(0xFF4E342E)   // Very Dark Brown
+val DeviceDisconnected = Color(0xFFD7CCC8) // Pale Brown
 
-
-val BrownPrimary = Color(0xFFA1887F)      // Light Brown
-val BrownContainer = Color(0xFFD7CCC8)    // Very Light Brown
-val BrownSecondary = Color(0xFFBCAAA4)
-val Cream = Color(0xFFF8F5F2)
+// Legacy / Compatibility
 val White = Color.White
-val DarkBrown = Color(0xFF4E342E)
+val Cream = CreamBrown

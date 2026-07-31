@@ -42,7 +42,7 @@ fun CameraViewScreen(
     viewModel: DeviceControlViewModel = viewModel(factory = DeviceControlViewModel.factory(deviceId))
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val device = uiState.device as? Device.Camera
+    val device = uiState.device
 
     Scaffold(
         topBar = {
@@ -70,7 +70,7 @@ fun CameraViewScreen(
 
 @Composable
 private fun CameraViewContent(
-    device: Device.Camera,
+    device: Device,
     onToggleStream: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -107,9 +107,9 @@ private fun CameraViewContent(
                     .background(
                         Brush.linearGradient(
                             colors = listOf(
-                                Color(0xFF1A237E),
-                                Color(0xFF283593),
-                                Color(0xFF37474F)
+                                com.example.smarthome.ui.theme.MediumBrown,
+                                com.example.smarthome.ui.theme.DarkBrown,
+                                com.example.smarthome.ui.theme.WarmBrown
                             )
                         )
                     ),
