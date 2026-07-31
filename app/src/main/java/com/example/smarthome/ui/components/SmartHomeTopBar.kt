@@ -12,6 +12,9 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
+import com.example.smarthome.ui.theme.DarkBrown
+import com.example.smarthome.ui.theme.NavColor
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SmartHomeTopBar(
@@ -29,15 +32,18 @@ fun SmartHomeTopBar(
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back"
+                        contentDescription = "Back",
+                        tint = DarkBrown
                     )
                 }
             }
         },
         actions = { actions() },
         colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
+            containerColor = NavColor,
+            titleContentColor = DarkBrown,
+            actionIconContentColor = DarkBrown,
+            navigationIconContentColor = DarkBrown
         )
     )
 }

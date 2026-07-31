@@ -26,6 +26,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.smarthome.data.model.Device
 import com.example.smarthome.data.model.DeviceState
+import com.example.smarthome.data.model.DeviceType
 
 @Composable
 fun DeviceGridCell(
@@ -73,11 +74,11 @@ fun DeviceGridCell(
     }
 }
 
-private fun Device.toIcon(): ImageVector = when (this) {
-    is Device.Outlet -> Icons.Default.Power
-    is Device.MultiSwitch -> Icons.Outlined.ToggleOn
-    is Device.ScheduledDevice -> Icons.Outlined.Lightbulb
-    is Device.Camera -> Icons.Default.Videocam
+private fun Device.toIcon(): ImageVector = when (this.type) {
+    DeviceType.OUTLET -> Icons.Default.Power
+    DeviceType.MULTI_SWITCH -> Icons.Outlined.ToggleOn
+    DeviceType.SCHEDULED_DEVICE -> Icons.Outlined.Lightbulb
+    DeviceType.CAMERA -> Icons.Default.Videocam
 }
 
 @Composable

@@ -10,19 +10,23 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.smarthome.data.model.Device
+import com.example.smarthome.data.model.DeviceType
 import com.example.smarthome.data.repository.MockSmartHomeRepository
 import com.example.smarthome.ui.screens.device.CameraViewScreen
 import com.example.smarthome.ui.screens.device.MultiSwitchControlScreen
 import com.example.smarthome.ui.screens.device.OutletControlScreen
 import com.example.smarthome.ui.screens.device.ScheduledControlScreen
+import com.example.smarthome.ui.screens.area_detail.AreaDetailScreen
 import com.example.smarthome.ui.screens.floor_detail.FloorDetailScreen
-import com.example.smarthome.ui.screens.floors.FloorListScreen
 import com.example.smarthome.ui.screens.login.LoginScreen
 import com.example.smarthome.ui.screens.register.RegisterScreen
 import com.example.smarthome.ui.screens.report.UsageReportScreen
-import com.example.smarthome.ui.screens.settings.SettingsScreen
+import com.example.smarthome.viewmodel.AreaDetailViewModel
 import com.example.smarthome.viewmodel.DeviceControlViewModel
 import com.example.smarthome.viewmodel.SmartHomeViewModelFactory
+
+import com.example.smarthome.ui.screens.MainScreen
+import com.example.smarthome.ui.screens.settings.ProfileScreen
 
 @Composable
 fun SmartHomeNavGraph(
@@ -40,7 +44,7 @@ fun SmartHomeNavGraph(
         composable(Screen.Login.route) {
             LoginScreen(
                 onLoginSuccess = {
-                    navController.navigate(Screen.FloorList.route) {
+                    navController.navigate(Screen.Main.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 },
@@ -54,7 +58,7 @@ fun SmartHomeNavGraph(
         composable(Screen.Register.route) {
             RegisterScreen(
                 onRegisterSuccess = {
-                    navController.navigate(Screen.FloorList.route) {
+                    navController.navigate(Screen.Main.route) {
                         popUpTo(Screen.Login.route) { inclusive = true }
                     }
                 },
@@ -65,19 +69,29 @@ fun SmartHomeNavGraph(
             )
         }
 
-        composable(Screen.FloorList.route) {
-            FloorListScreen(
-                onFloorClick = { floorId ->
+        composable(Screen.Main.route) {
+            MainScreen(
+                repository = repository,
+                onLogout = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(navController.graph.id) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onNavigateToFloorDetail = { floorId ->
                     navController.navigate(Screen.FloorDetail.createRoute(floorId))
                 },
-                onUsageReportClick = {
+                onNavigateToUsageReport = {
                     navController.navigate(Screen.UsageReport.route)
-                },
-                onSettingsClick = {
-                    navController.navigate(Screen.Settings.route)
-                },
-                viewModel = viewModel(factory = viewModelFactory)
+                }
             )
+        }
+
+        composable(Screen.FloorList.route) {
+            // This is now handled within MainScreen, but we can keep it as an alias or redirect
+            navController.navigate(Screen.Main.route) {
+                popUpTo(Screen.FloorList.route) { inclusive = true }
+            }
         }
 
         composable(
@@ -88,7 +102,32 @@ fun SmartHomeNavGraph(
             FloorDetailScreen(
                 floorId = floorId,
                 onBack = { navController.popBackStack() },
-                onDeviceClick = { device -> navigateToDevice(navController, device) }
+                onAreaClick = { fId, areaId ->
+                    navController.navigate(Screen.AreaDetail.createRoute(fId, areaId))
+                },
+                viewModel = viewModel(
+                    factory = FloorDetailViewModel.factory(floorId, repository)
+                )
+            )
+        }
+
+        composable(
+            route = Screen.AreaDetail.route,
+            arguments = listOf(
+                navArgument("floorId") { type = NavType.StringType },
+                navArgument("areaId") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val floorId = backStackEntry.arguments?.getString("floorId").orEmpty()
+            val areaId = backStackEntry.arguments?.getString("areaId").orEmpty()
+            AreaDetailScreen(
+                floorId = floorId,
+                areaId = areaId,
+                onBack = { navController.popBackStack() },
+                onDeviceClick = { device -> navigateToDevice(navController, device) },
+                viewModel = viewModel(
+                    factory = AreaDetailViewModel.factory(floorId, areaId, repository)
+                )
             )
         }
 
@@ -99,18 +138,6 @@ fun SmartHomeNavGraph(
             )
         }
 
-        composable(Screen.Settings.route) {
-            SettingsScreen(
-                onBack = { navController.popBackStack() },
-                onLogout = {
-                    navController.navigate(Screen.Login.route) {
-                        popUpTo(navController.graph.id) { inclusive = true }
-                        launchSingleTop = true
-                    }
-                },
-                viewModel = viewModel(factory = viewModelFactory)
-            )
-        }
 
         composable(
             route = Screen.OutletControl.route,
@@ -171,11 +198,11 @@ fun SmartHomeNavGraph(
 }
 
 private fun navigateToDevice(navController: NavHostController, device: Device) {
-    val route = when (device) {
-        is Device.Outlet -> Screen.OutletControl.createRoute(device.id)
-        is Device.MultiSwitch -> Screen.MultiSwitchControl.createRoute(device.id)
-        is Device.ScheduledDevice -> Screen.ScheduledControl.createRoute(device.id)
-        is Device.Camera -> Screen.CameraView.createRoute(device.id)
+    val route = when (device.type) {
+        DeviceType.OUTLET -> Screen.OutletControl.createRoute(device.id)
+        DeviceType.MULTI_SWITCH -> Screen.MultiSwitchControl.createRoute(device.id)
+        DeviceType.SCHEDULED_DEVICE -> Screen.ScheduledControl.createRoute(device.id)
+        DeviceType.CAMERA -> Screen.CameraView.createRoute(device.id)
     }
     navController.navigate(route)
 }

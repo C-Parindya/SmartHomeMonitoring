@@ -1,46 +1,30 @@
 package com.example.smarthome.ui.screens.floor_detail
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.smarthome.data.model.Area
 import com.example.smarthome.data.model.Device
-import com.example.smarthome.data.model.DeviceState
-import com.example.smarthome.data.repository.MockSmartHomeRepository
-import com.example.smarthome.ui.components.DeviceGridCell
 import com.example.smarthome.ui.components.EmptyState
 import com.example.smarthome.ui.components.LoadingState
 import com.example.smarthome.ui.components.SmartHomeTopBar
-import com.example.smarthome.ui.components.StatusBadge
 import com.example.smarthome.viewmodel.FloorDetailViewModel
 
 @Composable
 fun FloorDetailScreen(
     floorId: String,
     onBack: () -> Unit,
-    onDeviceClick: (Device) -> Unit,
-    viewModel: FloorDetailViewModel = viewModel(
-        factory = FloorDetailViewModel.factory(floorId, MockSmartHomeRepository.instance)
-    )
+    onAreaClick: (String, String) -> Unit,
+    viewModel: FloorDetailViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
@@ -51,6 +35,15 @@ fun FloorDetailScreen(
                 showBack = true,
                 onBack = onBack
             )
+        },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = viewModel::showAddAreaDialog,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = com.example.smarthome.ui.theme.DarkBrown
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add Area")
+            }
         }
     ) { padding ->
         when {
@@ -70,125 +63,117 @@ fun FloorDetailScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     item {
-                        Card(
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(16.dp)) {
-                                Text(
-                                    text = "Floor Plan",
-                                    style = MaterialTheme.typography.titleMedium
-                                )
-                                Text(
-                                    text = "${floor.gridRows}×${floor.gridCols} grid — tap a device to control",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(bottom = 12.dp)
-                                )
-                                FloorPlanGrid(
-                                    floor = floor,
-                                    onDeviceClick = onDeviceClick
-                                )
-                                HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp))
-                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    LegendItem(DeviceState.ON, "ON")
-                                    LegendItem(DeviceState.OFF, "OFF")
-                                    LegendItem(DeviceState.ERROR, "ERROR")
-                                    LegendItem(DeviceState.DISCONNECTED, "DISC")
-                                }
-                            }
-                        }
-                    }
-
-                    item {
                         Text(
-                            text = "Devices (${floor.deviceCount})",
+                            text = "Areas",
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
 
-                    items(floor.devices, key = { it.id }) { device ->
-                        DeviceListItem(device = device, onClick = { onDeviceClick(device) })
+                    if (floor.areas.isEmpty()) {
+                        item {
+                            Text(
+                                text = "No areas added yet. Tap + to add rooms or kitchen.",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    } else {
+                        items(floor.areas, key = { it.id }) { area ->
+                            AreaCard(
+                                area = area,
+                                onClick = { onAreaClick(floor.id, area.id) }
+                            )
+                        }
                     }
                 }
             }
         }
     }
-}
 
-@Composable
-private fun FloorPlanGrid(
-    floor: com.example.smarthome.data.model.Floor,
-    onDeviceClick: (Device) -> Unit
-) {
-    val deviceMap = floor.devices.associateBy { it.row to it.col }
-    val cells = buildList {
-        for (row in 0 until floor.gridRows) {
-            for (col in 0 until floor.gridCols) {
-                add(row to col)
-            }
-        }
-    }
-
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(floor.gridCols),
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-        userScrollEnabled = false
-    ) {
-        items(cells) { (row, col) ->
-            DeviceGridCell(
-                device = deviceMap[row to col],
-                onClick = onDeviceClick
-            )
-        }
-    }
-}
-
-@Composable
-private fun LegendItem(state: DeviceState, label: String) {
-    Row {
-        androidx.compose.foundation.layout.Box(
-            modifier = Modifier
-                .padding(top = 4.dp)
-                .then(Modifier)
-        )
-        StatusBadge(state = state)
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+    if (uiState.showAddAreaDialog) {
+        AddAreaDialog(
+            name = uiState.newAreaName,
+            onNameChange = viewModel::onNewAreaNameChange,
+            type = uiState.newAreaType,
+            onTypeChange = viewModel::onNewAreaTypeChange,
+            onDismiss = viewModel::dismissAddAreaDialog,
+            onConfirm = viewModel::addArea
         )
     }
 }
 
 @Composable
-private fun DeviceListItem(
-    device: Device,
-    onClick: () -> Unit
-) {
+private fun AreaCard(area: Area, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .then(Modifier),
-        onClick = onClick,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.secondaryContainer
+        )
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp),
+                .padding(16.dp)
+                .fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
-                Text(text = device.name, style = MaterialTheme.typography.titleSmall)
-                Text(
-                    text = "Position: (${device.row}, ${device.col})",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                Text(text = area.name, style = MaterialTheme.typography.titleSmall)
+                Text(text = area.type, style = MaterialTheme.typography.bodySmall)
             }
-            StatusBadge(state = device.state)
         }
     }
+}
+
+@Composable
+private fun AddAreaDialog(
+    name: String,
+    onNameChange: (String) -> Unit,
+    type: String,
+    onTypeChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add Area") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = onNameChange,
+                    label = { Text("Area Name (e.g. Kitchen)") },
+                    singleLine = true
+                )
+                
+                Text("Type:", style = MaterialTheme.typography.labelMedium)
+                val types = listOf("Room", "Kitchen", "Bathroom", "Living Room", "Bedroom", "Other")
+                
+                Column {
+                    types.chunked(3).forEach { rowTypes ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            rowTypes.forEach { areaType ->
+                                FilterChip(
+                                    selected = type == areaType,
+                                    onClick = { onTypeChange(areaType) },
+                                    label = { Text(areaType) }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = name.isNotBlank()) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }

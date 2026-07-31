@@ -10,16 +10,16 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class SettingsUiState(
+data class ProfileUiState(
     val user: UserProfile? = null
 )
 
-class SettingsViewModel(
+class ProfileViewModel(
     private val repository: MockSmartHomeRepository = MockSmartHomeRepository.instance
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(SettingsUiState())
-    val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(ProfileUiState())
+    val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {

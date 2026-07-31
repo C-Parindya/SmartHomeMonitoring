@@ -26,8 +26,8 @@ class SmartHomeViewModelFactory(
                 FloorListViewModel(repository) as T
             modelClass.isAssignableFrom(UsageReportViewModel::class.java) ->
                 UsageReportViewModel(repository) as T
-            modelClass.isAssignableFrom(SettingsViewModel::class.java) ->
-                SettingsViewModel(repository) as T
+            modelClass.isAssignableFrom(ProfileViewModel::class.java) ->
+                ProfileViewModel(repository) as T
             else -> throw IllegalArgumentException("Unknown ViewModel: ${modelClass.name}")
         }
     }

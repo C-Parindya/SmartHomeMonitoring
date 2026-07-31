@@ -1,49 +1,33 @@
 package com.example.smarthome.ui.theme
 
-import android.app.Activity
-import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.Color
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80
-)
-
-private val LightColorScheme = lightColorScheme(
+private val BrownColorScheme = lightColorScheme(
     primary = WarmBrown,
-    onPrimary = androidx.compose.ui.graphics.Color.White,
-    secondary = WarmBrownLight,
-    tertiary = WarmBrownDark,
-    primaryContainer = WarmBrownLight.copy(alpha = 0.3f),
-    onPrimaryContainer = WarmBrownDark
+    onPrimary = Color.White,
+    primaryContainer = SandBrown,
+    onPrimaryContainer = DarkBrown,
+    secondary = SoftBrown,
+    onSecondary = Color.White,
+    secondaryContainer = CreamBrown,
+    onSecondaryContainer = WarmBrown,
+    background = Color.White,
+    onBackground = DarkBrown,
+    surface = Color.White,
+    onSurface = DarkBrown,
+    surfaceVariant = CreamBrown,
+    onSurfaceVariant = WarmBrown
 )
 
 @Composable
 fun SmartHomeTheme(
-    darkTheme: Boolean = false,
-    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
-    }
-
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = BrownColorScheme,
         typography = Typography,
         content = content
     )

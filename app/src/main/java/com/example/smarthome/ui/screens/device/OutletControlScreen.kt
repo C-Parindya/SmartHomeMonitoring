@@ -36,7 +36,7 @@ fun OutletControlScreen(
     viewModel: DeviceControlViewModel = viewModel(factory = DeviceControlViewModel.factory(deviceId))
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val device = uiState.device as? Device.Outlet
+    val device = uiState.device
 
     Scaffold(
         topBar = {
@@ -64,7 +64,7 @@ fun OutletControlScreen(
 
 @Composable
 private fun OutletControlContent(
-    device: Device.Outlet,
+    device: Device,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier
 ) {
