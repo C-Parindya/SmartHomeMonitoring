@@ -99,7 +99,7 @@ fun SmartHomeNavGraph(
             route = Screen.FloorDetail.route,
             arguments = listOf(navArgument("floorId") { type = NavType.StringType })
         ) { backStackEntry ->
-            val floorId = backStackEntry.arguments?.getString("floorId").orEmpty()
+            val floorId = backStackEntry.arguments?.getString("floorId") ?: ""
             FloorDetailScreen(
                 floorId = floorId,
                 onBack = { navController.popBackStack() },
