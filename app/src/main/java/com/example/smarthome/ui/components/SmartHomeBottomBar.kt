@@ -28,7 +28,6 @@ fun SmartHomeBottomBar(
     val items = listOf(
         BottomNavItem("Home", Icons.Default.Home, Screen.Home),
         BottomNavItem("Floor Map", Icons.Default.Layers, Screen.FloorMap),
-        BottomNavItem("Add Floor", Icons.Default.AddCircle, Screen.AddFloor),
         BottomNavItem("Notification", Icons.Default.Notifications, Screen.Notification),
         BottomNavItem("Profile", Icons.Default.Person, Screen.Profile)
     )

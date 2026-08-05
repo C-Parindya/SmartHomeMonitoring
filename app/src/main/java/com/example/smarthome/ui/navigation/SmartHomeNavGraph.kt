@@ -23,6 +23,7 @@ import com.example.smarthome.ui.screens.register.RegisterScreen
 import com.example.smarthome.ui.screens.report.UsageReportScreen
 import com.example.smarthome.viewmodel.AreaDetailViewModel
 import com.example.smarthome.viewmodel.DeviceControlViewModel
+import com.example.smarthome.viewmodel.FloorDetailViewModel
 import com.example.smarthome.viewmodel.SmartHomeViewModelFactory
 
 import com.example.smarthome.ui.screens.MainScreen

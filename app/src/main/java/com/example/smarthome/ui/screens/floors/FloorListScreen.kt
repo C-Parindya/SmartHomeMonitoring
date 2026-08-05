@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -24,30 +25,89 @@ fun FloorListScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    if (uiState.floors.isEmpty()) {
-        EmptyState(
-            title = "No floors yet",
-            message = "Go to Add Floor section to add your floor",
-            icon = Icons.Outlined.Layers
-        )
-    } else {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item {
-                Text(
-                    text = "Select a floor to view details",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
+    Scaffold(
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { viewModel.showAddDialog() },
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
+                Icon(Icons.Default.Add, contentDescription = "Add Floor")
             }
-            items(uiState.floors, key = { it.id }) { floor ->
-                FloorCard(floor = floor, onClick = { onFloorClick(floor.id) })
+        }
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding)) {
+            if (uiState.floors.isEmpty()) {
+                EmptyState(
+                    title = "No floors yet",
+                    message = "Tap the + button to add your first floor",
+                    icon = Icons.Outlined.Layers
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    item {
+                        Text(
+                            text = "Select a floor to view details",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.padding(bottom = 8.dp)
+                        )
+                    }
+                    items(uiState.floors, key = { it.id }) { floor ->
+                        FloorCard(floor = floor, onClick = { onFloorClick(floor.id) })
+                    }
+                }
             }
         }
     }
+
+    if (uiState.showAddDialog) {
+        AddFloorDialog(
+            name = uiState.newFloorName,
+            onNameChange = { viewModel.onNewFloorNameChange(it) },
+            onDismiss = { viewModel.dismissAddDialog() },
+            onConfirm = { viewModel.addFloor() }
+        )
+    }
+}
+
+@Composable
+fun AddFloorDialog(
+    name: String,
+    onNameChange: (String) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add New Floor") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = onNameChange,
+                label = { Text("Floor Name") },
+                placeholder = { Text("e.g. Ground Floor, First Floor") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                enabled = name.isNotBlank()
+            ) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
