@@ -22,7 +22,6 @@ import com.example.smarthome.ui.components.SmartHomeTopBar
 import com.example.smarthome.ui.navigation.Screen
 import com.example.smarthome.ui.screens.home.HomeScreen
 import com.example.smarthome.ui.screens.floors.FloorListScreen
-import com.example.smarthome.ui.screens.floors.AddFloorScreen
 import com.example.smarthome.ui.screens.settings.ProfileScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.smarthome.viewmodel.SmartHomeViewModelFactory
@@ -48,7 +47,6 @@ fun MainScreen(
     val title = when (currentRoute) {
         Screen.Home.route -> "My Floors"
         Screen.FloorMap.route -> "Floor Map"
-        Screen.AddFloor.route -> "Add Floor"
         Screen.Notification.route -> "Notifications"
         Screen.Profile.route -> "Profile"
         else -> "Smart Home"
@@ -100,16 +98,6 @@ fun MainScreen(
                 FloorListScreen(
                     onFloorClick = onNavigateToFloorDetail,
                     viewModel = viewModel(factory = viewModelFactory)
-                )
-            }
-            composable(Screen.AddFloor.route) {
-                AddFloorScreen(
-                    viewModel = viewModel(factory = viewModelFactory),
-                    onFloorAdded = {
-                        navController.navigate(Screen.Home.route) {
-                            popUpTo(Screen.AddFloor.route) { inclusive = true }
-                        }
-                    }
                 )
             }
             composable(Screen.Notification.route) {
