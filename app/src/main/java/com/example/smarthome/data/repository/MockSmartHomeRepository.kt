@@ -12,7 +12,9 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.getValue
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -21,11 +23,15 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 
 class MockSmartHomeRepository {
     private val auth = FirebaseAuth.getInstance()
     private val database = FirebaseDatabase.getInstance("https://smart-home-monitor-7c214-default-rtdb.asia-southeast1.firebasedatabase.app")
+
+    private val timerScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Default + Job())
+    private val activeTimers = mutableMapOf<String, Job>()
 
     private val _currentUser = MutableStateFlow<UserProfile?>(null)
     val currentUser: StateFlow<UserProfile?> = _currentUser.asStateFlow()
@@ -138,6 +144,19 @@ class MockSmartHomeRepository {
             }
     }
 
+    fun editFloor(floorId: String, newName: String) {
+        val trimmed = newName.trim()
+        if (trimmed.isEmpty()) return
+        val userId = auth.currentUser?.uid ?: return
+        
+        database.getReference("users/$userId/floors/$floorId/name").setValue(trimmed)
+    }
+
+    fun deleteFloor(floorId: String) {
+        val userId = auth.currentUser?.uid ?: return
+        database.getReference("users/$userId/floors/$floorId").removeValue()
+    }
+
     fun addArea(floorId: String, name: String, type: String) {
         val trimmed = name.trim()
         if (trimmed.isEmpty()) return
@@ -155,6 +174,45 @@ class MockSmartHomeRepository {
         database.getReference("users/$userId/floors/$floorId").setValue(updatedFloor)
     }
 
+    fun editArea(floorId: String, areaId: String, newName: String, newType: String) {
+        val trimmed = newName.trim()
+        if (trimmed.isEmpty()) return
+        val userId = auth.currentUser?.uid ?: return
+        
+        val floor = floors.value.find { it.id == floorId } ?: return
+        val updatedAreas = floor.areas.map { 
+            if (it.id == areaId) it.copy(name = trimmed, type = newType) else it
+        }
+        
+        val updatedFloor = floor.copy(areas = updatedAreas)
+        database.getReference("users/$userId/floors/$floorId").setValue(updatedFloor)
+    }
+
+    fun deleteArea(floorId: String, areaId: String) {
+        val userId = auth.currentUser?.uid ?: return
+        val floor = floors.value.find { it.id == floorId } ?: return
+        val updatedAreas = floor.areas.filter { it.id != areaId }
+        
+        val updatedFloor = floor.copy(areas = updatedAreas)
+        database.getReference("users/$userId/floors/$floorId").setValue(updatedFloor)
+    }
+
+    fun deleteDevice(floorId: String, areaId: String, deviceId: String) {
+        val userId = auth.currentUser?.uid ?: return
+        val floor = floors.value.find { it.id == floorId } ?: return
+        
+        val updatedAreas = floor.areas.map { area ->
+            if (area.id == areaId) {
+                area.copy(devices = area.devices.filter { it.id != deviceId })
+            } else {
+                area
+            }
+        }
+        
+        val updatedFloor = floor.copy(areas = updatedAreas)
+        database.getReference("users/$userId/floors/$floorId").setValue(updatedFloor)
+    }
+
     fun addDeviceToArea(floorId: String, areaId: String, device: Device) {
         val userId = auth.currentUser?.uid ?: return
         val floor = floors.value.find { it.id == floorId } ?: return
@@ -164,6 +222,28 @@ class MockSmartHomeRepository {
                 it.copy(devices = it.devices + device)
             } else {
                 it
+            }
+        }
+        
+        val updatedFloor = floor.copy(areas = updatedAreas)
+        database.getReference("users/$userId/floors/$floorId").setValue(updatedFloor)
+    }
+
+    fun editDevice(floorId: String, areaId: String, deviceId: String, newName: String, newMaxDuration: Int) {
+        val userId = auth.currentUser?.uid ?: return
+        val floor = floors.value.find { it.id == floorId } ?: return
+        
+        val updatedAreas = floor.areas.map { area ->
+            if (area.id == areaId) {
+                area.copy(devices = area.devices.map { device ->
+                    if (device.id == deviceId) {
+                        device.copy(name = newName, maxDurationMinutes = newMaxDuration)
+                    } else {
+                        device
+                    }
+                })
+            } else {
+                area
             }
         }
         
@@ -231,12 +311,15 @@ class MockSmartHomeRepository {
         val currentFloors = floors.value
         
         var floorToUpdate: Floor? = null
+        var deviceAfterTransform: Device? = null
         
         currentFloors.forEach { floor ->
             val updatedAreas = floor.areas.map { area ->
                 val updatedDevices = area.devices.map { device ->
                     if (device.id == deviceId) {
-                        transform(device)
+                        val newDevice = transform(device)
+                        deviceAfterTransform = newDevice
+                        newDevice
                     } else {
                         device
                     }
@@ -255,6 +338,19 @@ class MockSmartHomeRepository {
         
         floorToUpdate?.let {
             database.getReference("users/$userId/floors/${it.id}").setValue(it)
+        }
+
+        // Handle auto-off timer logic
+        deviceAfterTransform?.let { device ->
+            activeTimers[device.id]?.cancel()
+            if (device.state == DeviceState.ON && device.maxDurationMinutes > 0) {
+                val job = timerScope.launch {
+                    delay(device.maxDurationMinutes * 60 * 1000L)
+                    // Auto-off the device after delay
+                    updateDevice(device.id) { it.copy(state = DeviceState.OFF) }
+                }
+                activeTimers[device.id] = job
+            }
         }
     }
 

@@ -17,6 +17,8 @@ data class FloorListUiState(
     val floors: List<Floor> = emptyList(),
     val user: UserProfile? = null,
     val showAddDialog: Boolean = false,
+    val showEditDialog: Boolean = false,
+    val selectedFloor: Floor? = null,
     val newFloorName: String = ""
 ) {
     val allDevices: List<Device> get() = floors.flatMap { it.areas }.flatMap { it.devices }
@@ -43,11 +45,15 @@ class FloorListViewModel(
     }
 
     fun showAddDialog() {
-        _uiState.update { it.copy(showAddDialog = true, newFloorName = "") }
+        _uiState.update { it.copy(showAddDialog = true, showEditDialog = false, newFloorName = "", selectedFloor = null) }
+    }
+
+    fun showEditDialog(floor: Floor) {
+        _uiState.update { it.copy(showEditDialog = true, showAddDialog = false, newFloorName = floor.name, selectedFloor = floor) }
     }
 
     fun dismissAddDialog() {
-        _uiState.update { it.copy(showAddDialog = false, newFloorName = "") }
+        _uiState.update { it.copy(showAddDialog = false, showEditDialog = false, newFloorName = "", selectedFloor = null) }
     }
 
     fun onNewFloorNameChange(name: String) {
@@ -60,6 +66,19 @@ class FloorListViewModel(
             repository.addFloor(name)
             dismissAddDialog()
         }
+    }
+
+    fun updateFloor() {
+        val state = _uiState.value
+        val floorId = state.selectedFloor?.id ?: return
+        if (state.newFloorName.isNotBlank()) {
+            repository.editFloor(floorId, state.newFloorName)
+            dismissAddDialog()
+        }
+    }
+
+    fun deleteFloor(floorId: String) {
+        repository.deleteFloor(floorId)
     }
 
     fun toggleDevice(device: Device) {

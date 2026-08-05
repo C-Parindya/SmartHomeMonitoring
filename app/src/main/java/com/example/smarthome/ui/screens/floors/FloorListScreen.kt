@@ -6,10 +6,11 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -24,6 +25,7 @@ fun FloorListScreen(
     viewModel: FloorListViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var floorToDelete by remember { mutableStateOf<Floor?>(null) }
 
     Scaffold(
         floatingActionButton = {
@@ -57,7 +59,12 @@ fun FloorListScreen(
                         )
                     }
                     items(uiState.floors, key = { it.id }) { floor ->
-                        FloorCard(floor = floor, onClick = { onFloorClick(floor.id) })
+                        FloorCard(
+                            floor = floor, 
+                            onClick = { onFloorClick(floor.id) },
+                            onEdit = { viewModel.showEditDialog(floor) },
+                            onDelete = { floorToDelete = floor }
+                        )
                     }
                 }
             }
@@ -72,10 +79,47 @@ fun FloorListScreen(
             onConfirm = { viewModel.addFloor() }
         )
     }
+
+    if (uiState.showEditDialog) {
+        AddFloorDialog(
+            title = "Edit Floor",
+            confirmLabel = "Update",
+            name = uiState.newFloorName,
+            onNameChange = { viewModel.onNewFloorNameChange(it) },
+            onDismiss = { viewModel.dismissAddDialog() },
+            onConfirm = { viewModel.updateFloor() }
+        )
+    }
+
+    floorToDelete?.let { floor ->
+        AlertDialog(
+            onDismissRequest = { floorToDelete = null },
+            title = { Text("Delete Floor") },
+            text = { Text("Are you sure you want to delete '${floor.name}'? This will also remove all areas and devices on this floor.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteFloor(floor.id)
+                        floorToDelete = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { floorToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
 
 @Composable
 fun AddFloorDialog(
+    title: String = "Add New Floor",
+    confirmLabel: String = "Add",
     name: String,
     onNameChange: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -83,7 +127,7 @@ fun AddFloorDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Add New Floor") },
+        title = { Text(title) },
         text = {
             OutlinedTextField(
                 value = name,
@@ -99,7 +143,7 @@ fun AddFloorDialog(
                 onClick = onConfirm,
                 enabled = name.isNotBlank()
             ) {
-                Text("Add")
+                Text(confirmLabel)
             }
         },
         dismissButton = {
@@ -113,7 +157,9 @@ fun AddFloorDialog(
 @Composable
 private fun FloorCard(
     floor: Floor,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -124,30 +170,69 @@ private fun FloorCard(
             containerColor = MaterialTheme.colorScheme.surface
         )
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column {
-                Text(
-                    text = floor.name,
-                    style = MaterialTheme.typography.titleLarge
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.Layers,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp)
                 )
-                Text(
-                    text = "${floor.deviceCount} device${if (floor.deviceCount != 1) "s" else ""}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
+                
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = floor.name,
+                        style = MaterialTheme.typography.titleLarge
+                    )
+                    Text(
+                        text = "${floor.deviceCount} device${if (floor.deviceCount != 1) "s" else ""}",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                
+                // Keep some space for bottom icons if needed, or just let them overlap slightly if text is long
+                Spacer(modifier = Modifier.width(64.dp))
             }
-            Icon(
-                imageVector = Icons.Outlined.Layers,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary
-            )
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                IconButton(
+                    onClick = onEdit,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Edit, 
+                        contentDescription = "Edit Floor", 
+                        tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+                
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Delete, 
+                        contentDescription = "Delete Floor", 
+                        tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
         }
     }
 }
