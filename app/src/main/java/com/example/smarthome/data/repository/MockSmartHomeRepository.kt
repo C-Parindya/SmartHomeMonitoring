@@ -4,8 +4,11 @@ import com.example.smarthome.data.model.Area
 import com.example.smarthome.data.model.Device
 import com.example.smarthome.data.model.DeviceState
 import com.example.smarthome.data.model.Floor
+import com.example.smarthome.data.model.Notification
 import com.example.smarthome.data.model.UsageStat
 import com.example.smarthome.data.model.UserProfile
+import com.example.smarthome.util.NotificationHelper
+import com.example.smarthome.SmartHomeApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
@@ -57,6 +60,35 @@ class MockSmartHomeRepository {
             
             floorsRef.addValueEventListener(listener)
             awaitClose { floorsRef.removeEventListener(listener) }
+        }
+    }.stateIn(
+        scope = kotlinx.coroutines.GlobalScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val notifications: StateFlow<List<Notification>> = _currentUser.flatMapLatest { user ->
+        if (user == null) return@flatMapLatest flowOf(emptyList<Notification>())
+        
+        callbackFlow {
+            val userId = auth.currentUser?.uid ?: return@callbackFlow
+            val ref = database.getReference("users/$userId/notifications")
+            
+            val listener = object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val list = snapshot.children.mapNotNull { it.getValue<Notification>() }
+                        .sortedByDescending { it.timestamp }
+                    trySend(list)
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    close(error.toException())
+                }
+            }
+            
+            ref.addValueEventListener(listener)
+            awaitClose { ref.removeEventListener(listener) }
         }
     }.stateIn(
         scope = kotlinx.coroutines.GlobalScope,
@@ -213,6 +245,19 @@ class MockSmartHomeRepository {
         database.getReference("users/$userId/floors/$floorId").setValue(updatedFloor)
     }
 
+    fun addNotification(title: String, message: String, type: String = "INFO") {
+        val userId = auth.currentUser?.uid ?: return
+        val ref = database.getReference("users/$userId/notifications")
+        val id = ref.push().key ?: "notif_${System.currentTimeMillis()}"
+        val notification = Notification(id = id, title = title, message = message, type = type)
+        ref.child(id).setValue(notification)
+    }
+
+    fun clearNotifications() {
+        val userId = auth.currentUser?.uid ?: return
+        database.getReference("users/$userId/notifications").removeValue()
+    }
+
     fun addDeviceToArea(floorId: String, areaId: String, device: Device) {
         val userId = auth.currentUser?.uid ?: return
         val floor = floors.value.find { it.id == floorId } ?: return
@@ -348,6 +393,17 @@ class MockSmartHomeRepository {
                     delay(device.maxDurationMinutes * 60 * 1000L)
                     // Auto-off the device after delay
                     updateDevice(device.id) { it.copy(state = DeviceState.OFF) }
+                    
+                    // Send notification if it's an Iron
+                    if (device.type == com.example.smarthome.data.model.DeviceType.SCHEDULED_DEVICE && 
+                        device.deviceKind == com.example.smarthome.data.model.ScheduledKind.IRON) {
+                        NotificationHelper.sendSafetyNotification(SmartHomeApp.instance, device.name)
+                        addNotification(
+                            title = "Safety Cutoff",
+                            message = "${device.name} has been automatically turned off for safety.",
+                            type = "SAFETY"
+                        )
+                    }
                 }
                 activeTimers[device.id] = job
             }
