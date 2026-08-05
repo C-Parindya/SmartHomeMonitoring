@@ -6,12 +6,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.smarthome.data.model.Device
@@ -26,7 +28,6 @@ fun AreaDetailScreen(
     floorId: String,
     areaId: String,
     onBack: () -> Unit,
-    onDeviceClick: (Device) -> Unit,
     viewModel: AreaDetailViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -62,7 +63,7 @@ fun AreaDetailScreen(
                             style = MaterialTheme.typography.titleMedium
                         )
                         Text(
-                            text = "Tap a cell to add a device or a device to control it.",
+                            text = "Tap cell for details/delete, tap power icon to toggle.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -87,7 +88,8 @@ fun AreaDetailScreen(
                                                 if (device != null) {
                                                     DeviceGridCell(
                                                         device = device,
-                                                        onClick = onDeviceClick
+                                                        onClick = { viewModel.onDeviceClick(it) },
+                                                        onToggle = { viewModel.toggleDevice(it) }
                                                     )
                                                 } else {
                                                     EmptyGridCell(onClick = { viewModel.onCellClick(row, col) })
@@ -110,8 +112,30 @@ fun AreaDetailScreen(
             onNameChange = viewModel::onNewDeviceNameChange,
             type = uiState.newDeviceType,
             onTypeChange = viewModel::onNewDeviceTypeChange,
+            timerMinutes = uiState.newDeviceTimer,
+            onTimerChange = viewModel::onNewDeviceTimerChange,
             onDismiss = viewModel::dismissAddDeviceDialog,
             onConfirm = viewModel::addDevice
+        )
+    }
+
+    if (uiState.showDeviceDetailsDialog && uiState.selectedDevice != null) {
+        DeviceDetailsDialog(
+            device = uiState.selectedDevice!!,
+            onDismiss = viewModel::dismissDeviceDetailsDialog,
+            onEdit = { viewModel.onEditDeviceClick(it) },
+            onDelete = viewModel::deleteDevice
+        )
+    }
+
+    if (uiState.showEditDeviceDialog && uiState.selectedDevice != null) {
+        EditDeviceDialog(
+            name = uiState.newDeviceName,
+            onNameChange = viewModel::onNewDeviceNameChange,
+            timerMinutes = uiState.newDeviceTimer,
+            onTimerChange = viewModel::onNewDeviceTimerChange,
+            onDismiss = viewModel::dismissDeviceDetailsDialog,
+            onConfirm = viewModel::updateDevice
         )
     }
 }
@@ -132,11 +156,100 @@ private fun EmptyGridCell(onClick: () -> Unit) {
 }
 
 @Composable
+private fun DeviceDetailsDialog(
+    device: Device,
+    onDismiss: () -> Unit,
+    onEdit: (Device) -> Unit,
+    onDelete: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Device Details") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Name: ${device.name}", style = MaterialTheme.typography.bodyLarge)
+                Text("Type: ${device.type}", style = MaterialTheme.typography.bodyMedium)
+                Text("Status: ${device.state}", style = MaterialTheme.typography.bodyMedium)
+                if (device.maxDurationMinutes > 0) {
+                    Text("Auto-Off Timer: ${device.maxDurationMinutes} mins", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        },
+        dismissButton = {
+            Row {
+                TextButton(onClick = { onEdit(device) }) {
+                    Text("Edit")
+                }
+                TextButton(
+                    onClick = onDelete,
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            }
+        }
+    )
+}
+
+@Composable
+private fun EditDeviceDialog(
+    name: String,
+    onNameChange: (String) -> Unit,
+    timerMinutes: Int,
+    onTimerChange: (Int) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Edit Device") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = onNameChange,
+                    label = { Text("Device Name") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+                
+                OutlinedTextField(
+                    value = if (timerMinutes == 0) "" else timerMinutes.toString(),
+                    onValueChange = { onTimerChange(it.toIntOrNull() ?: 0) },
+                    label = { Text("Auto-Off Timer (minutes)") },
+                    placeholder = { Text("0 for no timer") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onConfirm, enabled = name.isNotBlank()) {
+                Text("Update")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+@Composable
 private fun AddDeviceDialog(
     name: String,
     onNameChange: (String) -> Unit,
     type: String,
     onTypeChange: (String) -> Unit,
+    timerMinutes: Int,
+    onTimerChange: (Int) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
@@ -149,13 +262,17 @@ private fun AddDeviceDialog(
                     value = name,
                     onValueChange = onNameChange,
                     label = { Text("Device Name") },
-                    singleLine = true
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
                 
                 Text("Type:", style = MaterialTheme.typography.labelMedium)
-                val types = listOf("Outlet", "Camera", "Switch", "Light")
+                val types = listOf("Bulb", "Iron", "Camera", "Switch", "Fan")
                 
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
                     types.forEach { deviceType ->
                         FilterChip(
                             selected = type == deviceType,
@@ -164,6 +281,18 @@ private fun AddDeviceDialog(
                         )
                     }
                 }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                OutlinedTextField(
+                    value = if (timerMinutes == 0) "" else timerMinutes.toString(),
+                    onValueChange = { onTimerChange(it.toIntOrNull() ?: 0) },
+                    label = { Text("Auto-Off Timer (minutes)") },
+                    placeholder = { Text("0 for no timer") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         },
         confirmButton = {
