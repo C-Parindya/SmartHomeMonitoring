@@ -43,5 +43,6 @@ data class SwitchState(
 
 enum class ScheduledKind {
     LIGHT,
-    IRON
+    IRON,
+    FAN
 }

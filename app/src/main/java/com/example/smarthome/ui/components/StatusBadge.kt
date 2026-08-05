@@ -10,16 +10,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.smarthome.data.model.DeviceState
-import com.example.smarthome.ui.theme.DeviceDisconnected
-import com.example.smarthome.ui.theme.DeviceError
-import com.example.smarthome.ui.theme.DeviceOff
-import com.example.smarthome.ui.theme.DeviceOn
 
 fun DeviceState.toColor(): Color = when (this) {
-    DeviceState.ON -> DeviceOn
-    DeviceState.OFF -> DeviceOff
-    DeviceState.ERROR -> DeviceError
-    DeviceState.DISCONNECTED -> DeviceDisconnected
+    DeviceState.ON -> Color(0xFF4CAF50)      // 🟢 Green
+    DeviceState.OFF -> Color(0xFF757575)     // ⚪ Gray (for text visibility)
+    DeviceState.ERROR -> Color(0xFFF44336)   // 🔴 Red
+    DeviceState.DISCONNECTED -> Color(0xFF000000) // ⚫ Black
 }
 
 fun DeviceState.toLabel(): String = when (this) {

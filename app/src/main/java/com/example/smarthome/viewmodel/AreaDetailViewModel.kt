@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.smarthome.data.model.Area
 import com.example.smarthome.data.model.Device
+import com.example.smarthome.data.model.DeviceState
 import com.example.smarthome.data.model.DeviceType
 import com.example.smarthome.data.model.ScheduledKind
 import com.example.smarthome.data.repository.MockSmartHomeRepository
@@ -18,9 +19,13 @@ data class AreaDetailUiState(
     val area: Area? = null,
     val isLoading: Boolean = false,
     val showAddDeviceDialog: Boolean = false,
+    val showDeviceDetailsDialog: Boolean = false,
+    val showEditDeviceDialog: Boolean = false,
+    val selectedDevice: Device? = null,
     val selectedCell: Pair<Int, Int>? = null,
     val newDeviceName: String = "",
-    val newDeviceType: String = "Outlet"
+    val newDeviceType: String = "Bulb",
+    val newDeviceTimer: Int = 0
 )
 
 class AreaDetailViewModel(
@@ -49,16 +54,71 @@ class AreaDetailViewModel(
         }
     }
 
+    fun onDeviceClick(device: Device) {
+        _uiState.update { it.copy(showDeviceDetailsDialog = true, selectedDevice = device) }
+    }
+
+    fun onEditDeviceClick(device: Device) {
+        _uiState.update { it.copy(
+            showEditDeviceDialog = true, 
+            showDeviceDetailsDialog = false, 
+            selectedDevice = device, 
+            newDeviceName = device.name,
+            newDeviceTimer = device.maxDurationMinutes
+        ) }
+    }
+
+    fun dismissDeviceDetailsDialog() {
+        _uiState.update { it.copy(showDeviceDetailsDialog = false, showEditDeviceDialog = false, selectedDevice = null, newDeviceTimer = 0) }
+    }
+
+    fun deleteDevice() {
+        val deviceId = _uiState.value.selectedDevice?.id ?: return
+        repository.deleteDevice(floorId, areaId, deviceId)
+        dismissDeviceDetailsDialog()
+    }
+
+    fun updateDevice() {
+        val state = _uiState.value
+        val deviceId = state.selectedDevice?.id ?: return
+        if (state.newDeviceName.isNotBlank()) {
+            repository.editDevice(floorId, areaId, deviceId, state.newDeviceName, state.newDeviceTimer)
+            dismissDeviceDetailsDialog()
+        }
+    }
+
     fun dismissAddDeviceDialog() {
-        _uiState.update { it.copy(showAddDeviceDialog = false, selectedCell = null) }
+        _uiState.update { it.copy(showAddDeviceDialog = false, selectedCell = null, newDeviceTimer = 0) }
     }
 
     fun onNewDeviceNameChange(name: String) {
         _uiState.update { it.copy(newDeviceName = name) }
     }
 
+    fun onNewDeviceTimerChange(minutes: Int) {
+        _uiState.update { it.copy(newDeviceTimer = minutes) }
+    }
+
     fun onNewDeviceTypeChange(type: String) {
         _uiState.update { it.copy(newDeviceType = type) }
+    }
+
+    fun toggleDevice(device: Device) {
+        when (device.type) {
+            DeviceType.OUTLET -> repository.toggleOutlet(device.id)
+            DeviceType.SCHEDULED_DEVICE -> repository.toggleScheduledDevice(device.id)
+            DeviceType.CAMERA -> repository.toggleCameraStream(device.id)
+            DeviceType.MULTI_SWITCH -> {
+                // If there are switches, toggle the first one for quick access
+                device.switches.firstOrNull()?.let { 
+                    repository.toggleSwitch(device.id, it.id)
+                } ?: run {
+                    // Fallback toggle state if no switches defined yet
+                    val newState = if (device.state == DeviceState.ON) DeviceState.OFF else DeviceState.ON
+                    repository.toggleOutlet(device.id) // Using toggleOutlet as a generic state toggle
+                }
+            }
+        }
     }
 
     fun addDevice() {
@@ -67,11 +127,76 @@ class AreaDetailViewModel(
         if (state.newDeviceName.isNotBlank()) {
             val deviceId = "dev_${System.currentTimeMillis()}"
             val device = when (state.newDeviceType) {
-                "Outlet" -> Device(id = deviceId, name = state.newDeviceName, floorId = floorId, areaId = areaId, row = cell.first, col = cell.second, type = DeviceType.OUTLET)
-                "Camera" -> Device(id = deviceId, name = state.newDeviceName, floorId = floorId, areaId = areaId, row = cell.first, col = cell.second, type = DeviceType.CAMERA)
-                "Switch" -> Device(id = deviceId, name = state.newDeviceName, floorId = floorId, areaId = areaId, row = cell.first, col = cell.second, type = DeviceType.MULTI_SWITCH, switches = emptyList())
-                "Light" -> Device(id = deviceId, name = state.newDeviceName, floorId = floorId, areaId = areaId, row = cell.first, col = cell.second, type = DeviceType.SCHEDULED_DEVICE, deviceKind = ScheduledKind.LIGHT, maxDurationMinutes = 60)
-                else -> Device(id = deviceId, name = state.newDeviceName, floorId = floorId, areaId = areaId, row = cell.first, col = cell.second, type = DeviceType.OUTLET)
+                "Bulb" -> Device(
+                    id = deviceId, 
+                    name = state.newDeviceName, 
+                    floorId = floorId, 
+                    areaId = areaId, 
+                    row = cell.first, 
+                    col = cell.second, 
+                    type = DeviceType.SCHEDULED_DEVICE, 
+                    deviceKind = ScheduledKind.LIGHT,
+                    state = DeviceState.OFF,
+                    maxDurationMinutes = state.newDeviceTimer
+                )
+                "Iron" -> Device(
+                    id = deviceId, 
+                    name = state.newDeviceName, 
+                    floorId = floorId, 
+                    areaId = areaId, 
+                    row = cell.first, 
+                    col = cell.second, 
+                    type = DeviceType.SCHEDULED_DEVICE, 
+                    deviceKind = ScheduledKind.IRON,
+                    state = DeviceState.OFF,
+                    maxDurationMinutes = state.newDeviceTimer
+                )
+                "Camera" -> Device(
+                    id = deviceId, 
+                    name = state.newDeviceName, 
+                    floorId = floorId, 
+                    areaId = areaId, 
+                    row = cell.first, 
+                    col = cell.second, 
+                    type = DeviceType.CAMERA,
+                    state = DeviceState.OFF,
+                    maxDurationMinutes = state.newDeviceTimer
+                )
+                "Fan" -> Device(
+                    id = deviceId, 
+                    name = state.newDeviceName, 
+                    floorId = floorId, 
+                    areaId = areaId, 
+                    row = cell.first, 
+                    col = cell.second, 
+                    type = DeviceType.SCHEDULED_DEVICE, 
+                    deviceKind = ScheduledKind.FAN,
+                    state = DeviceState.OFF,
+                    maxDurationMinutes = state.newDeviceTimer
+                )
+                "Switch" -> Device(
+                    id = deviceId, 
+                    name = state.newDeviceName, 
+                    floorId = floorId, 
+                    areaId = areaId, 
+                    row = cell.first, 
+                    col = cell.second, 
+                    type = DeviceType.MULTI_SWITCH, 
+                    switches = listOf(com.example.smarthome.data.model.SwitchState("s1", "Main", false)),
+                    state = DeviceState.OFF,
+                    maxDurationMinutes = state.newDeviceTimer
+                )
+                else -> Device(
+                    id = deviceId, 
+                    name = state.newDeviceName, 
+                    floorId = floorId, 
+                    areaId = areaId, 
+                    row = cell.first, 
+                    col = cell.second, 
+                    type = DeviceType.OUTLET,
+                    state = DeviceState.OFF,
+                    maxDurationMinutes = state.newDeviceTimer
+                )
             }
             repository.addDeviceToArea(floorId, areaId, device)
             dismissAddDeviceDialog()

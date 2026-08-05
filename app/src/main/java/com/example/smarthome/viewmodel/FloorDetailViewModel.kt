@@ -16,6 +16,8 @@ data class FloorDetailUiState(
     val floor: Floor? = null,
     val isLoading: Boolean = false,
     val showAddAreaDialog: Boolean = false,
+    val showEditAreaDialog: Boolean = false,
+    val selectedArea: Area? = null,
     val newAreaName: String = "",
     val newAreaType: String = "Room"
 )
@@ -38,11 +40,15 @@ class FloorDetailViewModel(
     }
 
     fun showAddAreaDialog() {
-        _uiState.update { it.copy(showAddAreaDialog = true, newAreaName = "", newAreaType = "Room") }
+        _uiState.update { it.copy(showAddAreaDialog = true, showEditAreaDialog = false, newAreaName = "", newAreaType = "Room", selectedArea = null) }
+    }
+
+    fun showEditAreaDialog(area: Area) {
+        _uiState.update { it.copy(showEditAreaDialog = true, showAddAreaDialog = false, newAreaName = area.name, newAreaType = area.type, selectedArea = area) }
     }
 
     fun dismissAddAreaDialog() {
-        _uiState.update { it.copy(showAddAreaDialog = false) }
+        _uiState.update { it.copy(showAddAreaDialog = false, showEditAreaDialog = false) }
     }
 
     fun onNewAreaNameChange(name: String) {
@@ -59,6 +65,19 @@ class FloorDetailViewModel(
             repository.addArea(floorId, state.newAreaName, state.newAreaType)
             dismissAddAreaDialog()
         }
+    }
+
+    fun updateArea() {
+        val state = _uiState.value
+        val areaId = state.selectedArea?.id ?: return
+        if (state.newAreaName.isNotBlank()) {
+            repository.editArea(floorId, areaId, state.newAreaName, state.newAreaType)
+            dismissAddAreaDialog()
+        }
+    }
+
+    fun deleteArea(areaId: String) {
+        repository.deleteArea(floorId, areaId)
     }
 
     companion object {
