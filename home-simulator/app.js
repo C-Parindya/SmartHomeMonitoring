@@ -19,6 +19,7 @@ const auth = firebase.auth();
 const database = firebase.database();
 
 let previousDevices = new Map();
+let activeTimers = new Map(); // Stores { timeoutId, endTime }
 let floorsListener = null;
 let floorsRef = null;
 
@@ -66,6 +67,37 @@ loginForm.addEventListener("submit", async (e) => {
 
 logoutBtn.addEventListener("click", () => auth.signOut());
 
+houseView.addEventListener("click", async (e) => {
+  const switchChip = e.target.closest(".switch-chip");
+  const deviceCard = e.target.closest(".device-card");
+
+  if (!auth.currentUser || !deviceCard) return;
+  const userId = auth.currentUser.uid;
+
+  const { floorId, areaIdx, deviceIdx } = deviceCard.dataset;
+  const device = previousDevices.get(deviceCard.dataset.deviceId);
+  if (!device) return;
+
+  if (switchChip) {
+    const switchIdx = switchChip.dataset.switchIdx;
+    if (device.switches && device.switches[switchIdx]) {
+      const newState = !device.switches[switchIdx].isOn;
+      database.ref(`users/${userId}/floors/${floorId}/areas/${areaIdx}/devices/${deviceIdx}/switches/${switchIdx}/isOn`).set(newState);
+    }
+    return;
+  }
+
+  // Toggle main device state
+  if (device.type === "CAMERA") {
+    database.ref(`users/${userId}/floors/${floorId}/areas/${areaIdx}/devices/${deviceIdx}/isStreaming`).set(!device.isStreaming);
+  } else if (device.type === "MULTI_SWITCH") {
+    // Multi-switch main card click could toggle all, but typically we want chip clicks
+  } else {
+    const newState = device.state === "ON" ? "OFF" : "ON";
+    database.ref(`users/${userId}/floors/${floorId}/areas/${areaIdx}/devices/${deviceIdx}/state`).set(newState);
+  }
+});
+
 function friendlyAuthError(code) {
   const messages = {
     "auth/invalid-email": "Invalid email address.",
@@ -92,6 +124,8 @@ function showSimulator(user) {
 function startListening(userId) {
   stopListening();
   previousDevices.clear();
+  activeTimers.forEach((t) => clearTimeout(t.timeoutId));
+  activeTimers.clear();
 
   floorsRef = database.ref(`users/${userId}/floors`);
   floorsListener = (snapshot) => {
@@ -109,6 +143,8 @@ function stopListening() {
     floorsListener = null;
     floorsRef = null;
   }
+  activeTimers.forEach((t) => clearTimeout(t.timeoutId));
+  activeTimers.clear();
 }
 
 function parseFloors(snapshot) {
@@ -143,7 +179,7 @@ function renderHouse(floors) {
       const areasHtml =
         floor.areas.length === 0
           ? `<p class="no-devices">No areas on this floor</p>`
-          : `<div class="areas-grid">${floor.areas.map(renderRoom).join("")}</div>`;
+          : `<div class="areas-grid">${floor.areas.map((area, areaIdx) => renderRoom(area, areaIdx, floor.id)).join("")}</div>`;
 
       return `
         <div class="floor-block" data-floor-id="${escapeHtml(floor.id)}">
@@ -157,14 +193,14 @@ function renderHouse(floors) {
     .join("");
 }
 
-function renderRoom(area) {
+function renderRoom(area, areaIdx, floorId) {
   const devices = Array.isArray(area.devices) ? area.devices : [];
   const hasActive = devices.some((d) => isDeviceActive(d));
 
   const devicesHtml =
     devices.length === 0
       ? `<p class="no-devices">No devices in this room</p>`
-      : `<div class="devices-list">${devices.map(renderDevice).join("")}</div>`;
+      : `<div class="devices-list">${devices.map((device, deviceIdx) => renderDevice(device, deviceIdx, areaIdx, floorId)).join("")}</div>`;
 
   return `
     <div class="room ${hasActive ? "has-active-devices" : ""}" data-area-id="${escapeHtml(area.id)}">
@@ -176,8 +212,8 @@ function renderRoom(area) {
     </div>`;
 }
 
-function renderDevice(device) {
-  detectChange(device);
+function renderDevice(device, deviceIdx, areaIdx, floorId) {
+  detectChange(device, deviceIdx, areaIdx, floorId);
 
   const state = device.state || "OFF";
   const icon = getDeviceIcon(device);
@@ -194,14 +230,19 @@ function renderDevice(device) {
   if (device.type === "MULTI_SWITCH" && Array.isArray(device.switches)) {
     switchesHtml = `<div class="switches-row">${device.switches
       .map(
-        (s) =>
-          `<span class="switch-chip ${s.isOn ? "on" : ""}">${escapeHtml(s.name || "Switch")}: ${s.isOn ? "ON" : "OFF"}</span>`
+        (s, switchIdx) =>
+          `<span class="switch-chip ${s.isOn ? "on" : ""}" data-switch-idx="${switchIdx}">${escapeHtml(s.name || "Switch")}: ${s.isOn ? "ON" : "OFF"}</span>`
       )
       .join("")}</div>`;
   }
 
   return `
-    <div class="device-card state-${state}" data-device-id="${escapeHtml(device.id)}" id="device-${escapeHtml(device.id)}">
+    <div class="device-card state-${state}"
+         data-device-id="${escapeHtml(device.id)}"
+         data-device-idx="${deviceIdx}"
+         data-area-idx="${areaIdx}"
+         data-floor-id="${escapeHtml(floorId)}"
+         id="device-${escapeHtml(device.id)}">
       <div class="device-icon-wrap ${isLightOn ? "light-on" : ""}">
         <span class="device-icon kind-${kindClass}">${icon}</span>
         ${isStreaming ? '<span class="camera-rec-dot"></span>' : ""}
@@ -287,7 +328,7 @@ function updateSummary(floors) {
   summaryText.textContent = `${floors.length} floor${floors.length !== 1 ? "s" : ""}, ${areaCount} area${areaCount !== 1 ? "s" : ""}, ${deviceCount} device${deviceCount !== 1 ? "s" : ""} · ${onCount} active`;
 }
 
-function detectChange(device) {
+function detectChange(device, deviceIdx, areaIdx, floorId) {
   const key = device.id;
   const prev = previousDevices.get(key);
 
@@ -316,7 +357,88 @@ function detectChange(device) {
     }
   }
 
+  manageAutoOff(device, floorId, areaIdx, deviceIdx);
   previousDevices.set(key, { ...device, switches: device.switches ? [...device.switches] : [] });
+}
+
+function manageAutoOff(device, floorId, areaIdx, deviceIdx) {
+  const timerKey = device.id;
+  if (!timerKey) return;
+
+  const existing = activeTimers.get(timerKey);
+  const duration = parseFloat(device.maxDurationMinutes);
+  const isAutoDevice = device.type === "SCHEDULED_DEVICE" && !isNaN(duration) && duration > 0;
+  const isOn = device.state === "ON";
+
+  if (isAutoDevice && isOn) {
+    if (!existing) {
+      const durationMs = Math.floor(duration * 60 * 1000);
+      const endTime = Date.now() + durationMs;
+      const userId = auth.currentUser ? auth.currentUser.uid : null;
+
+      const timeoutId = setTimeout(() => {
+        if (userId) {
+          database
+            .ref(`users/${userId}/floors/${floorId}/areas/${areaIdx}/devices/${deviceIdx}/state`)
+            .set("OFF")
+            .catch(err => console.error("Auto-off failed:", err));
+          logTimerExpiry(device);
+        }
+        activeTimers.delete(timerKey);
+      }, durationMs);
+
+      activeTimers.set(timerKey, { timeoutId, endTime });
+    }
+  } else {
+    if (existing) {
+      clearTimeout(existing.timeoutId);
+      activeTimers.delete(timerKey);
+    }
+  }
+}
+
+function updateTimersUI() {
+  const now = Date.now();
+  activeTimers.forEach((timer, deviceId) => {
+    const deviceEl = document.getElementById(`device-${deviceId}`);
+    if (!deviceEl) return;
+
+    const metaEl = deviceEl.querySelector(".device-meta");
+    const device = previousDevices.get(deviceId);
+
+    if (metaEl && device && device.state === "ON") {
+      const secondsLeft = Math.max(0, Math.ceil((timer.endTime - now) / 1000));
+      const label = getDeviceTypeLabel(device);
+
+      if (secondsLeft > 0) {
+        metaEl.textContent = `${label} · auto-off in ${formatRemaining(secondsLeft)}`;
+        if (secondsLeft <= 10) {
+          metaEl.style.color = "#f44336";
+          metaEl.style.fontWeight = "bold";
+        } else {
+          metaEl.style.color = "";
+          metaEl.style.fontWeight = "";
+        }
+      }
+    }
+  });
+}
+
+function formatRemaining(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+setInterval(updateTimersUI, 1000);
+
+function logTimerExpiry(device) {
+  const item = document.createElement("li");
+  item.className = "activity-item off-event";
+  item.innerHTML = `
+    <strong>${escapeHtml(device.name)}</strong> auto-off triggered
+    <span class="time">${formatTime(new Date())} · ${device.maxDurationMinutes}m expired</span>`;
+  prependActivity(item);
 }
 
 function getEffectiveState(device) {
@@ -341,7 +463,7 @@ function logActivity(device, fromState, toState, kind = "power") {
   item.className = `activity-item ${isOn ? "on-event" : "off-event"}`;
   item.innerHTML = `
     <strong>${escapeHtml(device.name)}</strong> ${action}
-    <span class="time">${formatTime(new Date())} · from mobile app</span>`;
+    <span class="time">${formatTime(new Date())}</span>`;
 
   prependActivity(item);
 }
