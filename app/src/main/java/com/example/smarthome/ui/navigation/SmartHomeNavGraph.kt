@@ -125,7 +125,7 @@ fun SmartHomeNavGraph(
                 floorId = floorId,
                 areaId = areaId,
                 onBack = { navController.popBackStack() },
-                viewModel = viewModel(
+                 viewModel = viewModel(
                     factory = AreaDetailViewModel.factory(floorId, areaId, repository)
                 )
             )
