@@ -382,6 +382,16 @@ body {
   border-radius: 10px;
   border-left: 3px solid var(--off);
   transition: border-color 0.3s, background 0.3s, transform 0.2s;
+  cursor: pointer;
+  user-select: none;
+}
+
+.device-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.device-card.state-ON:hover {
+  background: rgba(76, 175, 80, 0.12);
 }
 
 .device-card.state-ON {
@@ -541,6 +551,12 @@ body {
   border-radius: 4px;
   background: rgba(96, 125, 139, 0.2);
   color: var(--text-muted);
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+
+.switch-chip:hover {
+  filter: brightness(1.2);
 }
 
 .switch-chip.on {

@@ -1,15 +1,15 @@
 # Home Simulator
 
-A web-based **physical home view** for the SmartHomeMonitoring Android app. It connects to the same Firebase Realtime Database and shows, in real time, when devices are turned on or off from the mobile app.
+A web-based **physical home view** for the SmartHomeMonitoring Android app. It connects to the same Firebase Realtime Database and allows you to **monitor and control** devices in real time.
 
 Use this for demos, presentations, or testing — open it on a laptop or second screen while controlling devices from your phone.
 
 ## What it shows
 
 - **Floors and rooms** matching your mobile app layout
-- **Devices** (bulbs, fans, irons, outlets, switches, cameras) with live state
+- **Interactive Devices** — click any device card (bulb, fan, etc.) or switch chip to toggle its state in the database
 - **Visual effects** — lights glow when ON, fans spin, rooms light up when active
-- **Activity log** — every toggle from the mobile app appears instantly
+- **Activity log** — every change (from phone or simulator) appears instantly
 
 ## Quick start
 
@@ -58,19 +58,19 @@ Then open `http://localhost:3000` in your browser.
 2. On your phone, open the SmartHomeMonitoring app
 3. Navigate to **Floors → pick a floor → pick an area**
 4. Tap the **power icon** on a device (bulb, outlet, etc.)
-5. Watch the simulator update — the light glows, fan spins, activity log shows the change
+5. Watch the simulator update (or click the device in the simulator and watch your phone update)
 
 ## Architecture
 
 ```
 ┌─────────────────┐         ┌──────────────────┐         ┌─────────────────┐
-│  Android App    │ ─write─▶│  Firebase RTDB   │◀─listen─│  Home Simulator │
+│  Android App    │◀─sync──▶│  Firebase RTDB   │◀─sync──▶│  Home Simulator │
 │  (remote control)│         │  users/{uid}/    │         │  (physical view)│
 └─────────────────┘         │  floors          │         └─────────────────┘
                             └──────────────────┘
 ```
 
-The mobile app writes device state to Firebase. The simulator listens on the same path and renders the "home side" — what would happen at the physical house if real hardware were connected.
+Both the mobile app and the simulator have read/write access to the device states. When you click a device in either interface, Firebase synchronizes the change to all connected clients instantly.
 
 ## Files
 
