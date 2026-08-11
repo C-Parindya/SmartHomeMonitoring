@@ -28,6 +28,8 @@ class SmartHomeViewModelFactory(
                 UsageReportViewModel(repository) as T
             modelClass.isAssignableFrom(ProfileViewModel::class.java) ->
                 ProfileViewModel(repository) as T
+            modelClass.isAssignableFrom(NotificationViewModel::class.java) ->
+                NotificationViewModel(repository) as T
             else -> throw IllegalArgumentException("Unknown ViewModel: ${modelClass.name}")
         }
     }

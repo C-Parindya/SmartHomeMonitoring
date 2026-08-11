@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Home Simulator — Physical Home View</title>
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div id="app">
+    <!-- Login -->
+    <section id="login-screen" class="screen">
+      <div class="login-card">
+        <div class="login-icon">🏠</div>
+        <h1>Home Simulator</h1>
+        <p class="subtitle">Physical home view — syncs with your mobile app via Firebase</p>
+        <form id="login-form">
+          <label>
+            Email
+            <input type="email" id="email" placeholder="Same account as mobile app" required />
+          </label>
+          <label>
+            Password
+            <input type="password" id="password" placeholder="Your password" required />
+          </label>
+          <p id="login-error" class="error hidden"></p>
+          <button type="submit" id="login-btn">Connect to Home</button>
+        </form>
+        <p class="hint">Use the same login as the Android app. Toggle devices on mobile — watch them change here in real time.</p>
+      </div>
+    </section>
+
+    <!-- Main simulator -->
+    <section id="simulator-screen" class="screen hidden">
+      <header class="top-bar">
+        <div class="top-bar-left">
+          <span class="home-badge">🏠 Physical Home</span>
+          <h2 id="user-label">Connected</h2>
+        </div>
+        <div class="top-bar-center">
+          <span id="connection-status" class="status-pill connected">
+            <span class="pulse-dot"></span> Live
+          </span>
+          <span id="last-update" class="last-update">Waiting for data…</span>
+        </div>
+        <div class="top-bar-right">
+          <button id="logout-btn" class="btn-secondary">Logout</button>
+        </div>
+      </header>
+
+      <main class="main-layout">
+        <div class="house-panel">
+          <div class="panel-header">
+            <h3>Home Layout</h3>
+            <p id="summary-text">Loading floors and devices…</p>
+          </div>
+          <div id="house-view" class="house-view">
+            <div class="empty-house">
+              <span class="empty-icon">🏡</span>
+              <p>No floors yet. Add floors and devices in the mobile app.</p>
+            </div>
+          </div>
+        </div>
+
+        <aside class="side-panel">
+          <div class="activity-panel">
+            <h3>Live Activity</h3>
+            <p class="panel-desc">Commands from the mobile app appear here instantly</p>
+            <ul id="activity-log" class="activity-log">
+              <li class="activity-item muted">Waiting for device changes…</li>
+            </ul>
+          </div>
+
+          <div class="legend-panel">
+            <h3>Device States</h3>
+            <div class="legend-grid">
+              <div class="legend-item"><span class="dot on"></span> ON — device active</div>
+              <div class="legend-item"><span class="dot off"></span> OFF — device idle</div>
+              <div class="legend-item"><span class="dot error"></span> ERROR — fault</div>
+              <div class="legend-item"><span class="dot disconnected"></span> DISCONNECTED</div>
+            </div>
+          </div>
+
+          <div class="tips-panel">
+            <h3>How to demo</h3>
+            <ol>
+              <li>Keep this page open on a laptop or second screen</li>
+              <li>Open the Android app on your phone</li>
+              <li>Go to Floor → Area → tap the power icon on a device</li>
+              <li>Watch the light, fan, or outlet change here in real time</li>
+            </ol>
+          </div>
+        </aside>
+      </main>
+    </section>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
