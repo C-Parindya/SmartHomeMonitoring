@@ -357,7 +357,7 @@ class MockSmartHomeRepository {
         
         var floorToUpdate: Floor? = null
         var deviceAfterTransform: Device? = null
-        
+
         currentFloors.forEach { floor ->
             val updatedAreas = floor.areas.map { area ->
                 val updatedDevices = area.devices.map { device ->
@@ -393,9 +393,9 @@ class MockSmartHomeRepository {
                     delay(device.maxDurationMinutes * 60 * 1000L)
                     // Auto-off the device after delay
                     updateDevice(device.id) { it.copy(state = DeviceState.OFF) }
-                    
+
                     // Send notification if it's an Iron
-                    if (device.type == com.example.smarthome.data.model.DeviceType.SCHEDULED_DEVICE && 
+                    if (device.type == com.example.smarthome.data.model.DeviceType.SCHEDULED_DEVICE &&
                         device.deviceKind == com.example.smarthome.data.model.ScheduledKind.IRON) {
                         NotificationHelper.sendSafetyNotification(SmartHomeApp.instance, device.name)
                         addNotification(
