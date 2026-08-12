@@ -14,10 +14,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Air
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Power
-import androidx.compose.material.icons.filled.PowerSettingsNew
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.WindPower
 import androidx.compose.material.icons.outlined.Lightbulb
@@ -78,11 +77,11 @@ fun DeviceGridCell(
         contentAlignment = Alignment.Center
     ) {
         if (device != null) {
-            // Main content area for details navigation
+            // Main content area for toggling device
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .clickable { onClick(device) },
+                    .clickable { onToggle(device) },
                 contentAlignment = Alignment.Center
             ) {
                 Column(
@@ -107,21 +106,21 @@ fun DeviceGridCell(
                 }
             }
 
-            // Power status indicator/button in top-right
+            // Edit button in top-right
             IconButton(
-                onClick = { onToggle(device) },
+                onClick = { onClick(device) },
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .size(24.dp)
                     .padding(2.dp),
                 colors = IconButtonDefaults.iconButtonColors(
-                    containerColor = stateColor.copy(alpha = 0.2f),
-                    contentColor = if (device.state == DeviceState.OFF) Color.Gray else stateColor
+                    containerColor = Color.LightGray.copy(alpha = 0.2f),
+                    contentColor = DarkBrown.copy(alpha = 0.6f)
                 )
             ) {
                 Icon(
-                    imageVector = Icons.Default.PowerSettingsNew,
-                    contentDescription = "Toggle Power",
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = "Edit Device",
                     modifier = Modifier.size(12.dp)
                 )
             }
