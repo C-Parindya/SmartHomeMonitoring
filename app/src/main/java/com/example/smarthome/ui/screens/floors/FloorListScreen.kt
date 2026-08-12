@@ -60,8 +60,7 @@ fun FloorListScreen(
             item {
                 ScreenHeader(
                     title = "Floor Map",
-                    subtitle = "Navigate and explore\nyour building easily",
-                    icon = Icons.Outlined.Layers
+                    subtitle = "Navigate and explore\nyour building easily"
                 )
             }
 
