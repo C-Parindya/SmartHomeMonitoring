@@ -8,6 +8,7 @@ sealed class Screen(val route: String) {
     data object FloorMap : Screen("floor_map")
     data object Notification : Screen("notification")
     data object Profile : Screen("profile")
+    data object EditProfile : Screen("edit_profile")
 
     data object FloorList : Screen("floor_list") // Keep for now if needed or alias to Home
     data object UsageReport : Screen("usage_report")
