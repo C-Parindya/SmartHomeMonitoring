@@ -98,8 +98,8 @@ fun ScreenHeader(
                         Icon(
                             imageVector = icon,
                             contentDescription = null,
-                            tint = DarkBrown.copy(alpha = 0.15f),
-                            modifier = Modifier.size(56.dp)
+                            tint = DarkBrown.copy(alpha = 0.2f),
+                            modifier = Modifier.size(48.dp)
                         )
                     }
                 }
