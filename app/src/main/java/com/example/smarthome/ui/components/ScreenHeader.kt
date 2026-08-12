@@ -89,7 +89,7 @@ fun ScreenHeader(
             if (icon != null) {
                 Surface(
                     modifier = Modifier
-                        .size(160.dp, 120.dp)
+                        .size(120.dp, 100.dp)
                         .offset(y = 20.dp),
                     shape = RoundedCornerShape(24.dp),
                     color = Color.White.copy(alpha = 0.5f)
