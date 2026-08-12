@@ -15,6 +15,7 @@ import kotlinx.coroutines.launch
 
 data class FloorListUiState(
     val floors: List<Floor> = emptyList(),
+    val notifications: List<com.example.smarthome.data.model.Notification> = emptyList(),
     val user: UserProfile? = null,
     val showAddDialog: Boolean = false,
     val showEditDialog: Boolean = false,
@@ -35,6 +36,11 @@ class FloorListViewModel(
         viewModelScope.launch {
             repository.floors.collect { floors ->
                 _uiState.update { it.copy(floors = floors) }
+            }
+        }
+        viewModelScope.launch {
+            repository.notifications.collect { notifications ->
+                _uiState.update { it.copy(notifications = notifications) }
             }
         }
         viewModelScope.launch {

@@ -1,99 +1,336 @@
 package com.example.smarthome.ui.screens.home
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Layers
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.smarthome.data.model.DeviceState
+import com.example.smarthome.ui.theme.DarkBrown
 import com.example.smarthome.viewmodel.FloorListViewModel
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun HomeScreen(
+    onViewAllActivity: () -> Unit,
     viewModel: FloorListViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp)
-    ) {
-        // Welcome Message
-        Column {
-            Text(
-                text = "Welcome back,",
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                text = uiState.user?.displayName ?: "User",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-
-        // Summary Card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.secondaryContainer
-            )
+    Scaffold(
+        containerColor = Color(0xFFF9F9F9)
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = padding.calculateBottomPadding()),
         ) {
-            Row(
-                modifier = Modifier
-                    .padding(20.dp)
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Home,
-                    contentDescription = null,
-                    modifier = Modifier.size(40.dp),
-                    tint = MaterialTheme.colorScheme.primary
-                )
-                Column {
-                    val floorCount = uiState.floors.size
-                    val deviceCount = uiState.floors.sumOf { it.deviceCount }
-                    Text(
-                        text = "Your Home at a glance",
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                    Text(
-                        text = "$floorCount Floors | $deviceCount Devices Connected",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            item {
+                HomeHeader(userName = uiState.user?.displayName ?: "User")
             }
-        }
-        
-        // Quick Action Placeholder
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(
-                    text = "System Status",
-                    style = MaterialTheme.typography.titleSmall
+
+            item {
+                val totalDevices = uiState.floors.sumOf { it.deviceCount }
+                val totalFloors = uiState.floors.size
+                
+                val allDevices = uiState.floors.flatMap { it.devices + it.areas.flatMap { area -> area.devices } }
+                val devicesOn = allDevices.count { it.state == DeviceState.ON }
+                val devicesError = allDevices.count { it.state == DeviceState.ERROR }
+
+                OverviewCard(
+                    totalDevices = totalDevices,
+                    totalFloors = totalFloors,
+                    devicesOn = devicesOn,
+                    devicesError = devicesError,
+                    modifier = Modifier.padding(horizontal = 24.dp).offset(y = (-40).dp)
                 )
-                Text(
-                    text = "All systems are running smoothly. No alerts at this time.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+            }
+
+            item {
+                SectionHeader(title = "System Recent Activity", onViewAll = onViewAllActivity)
+            }
+
+            item {
+                ActivityList(
+                    notifications = uiState.notifications.take(5),
+                    modifier = Modifier.padding(horizontal = 24.dp)
                 )
+            }
+            
+            item {
+                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
 }
+
+@Composable
+private fun HomeHeader(userName: String) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(280.dp)
+            .background(Color.White)
+    ) {
+        // Top Background (Beige)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight(0.85f)
+                .background(Color(0xFFD0B29A).copy(alpha = 0.2f))
+        )
+
+        // Wavy separation
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(80.dp)
+                .align(Alignment.BottomCenter)
+        ) {
+            val path = Path().apply {
+                moveTo(0f, 0f)
+                cubicTo(
+                    size.width * 0.25f, size.height * 0.5f,
+                    size.width * 0.75f, -size.height * 0.5f,
+                    size.width, size.height * 0.5f
+                )
+                lineTo(size.width, size.height)
+                lineTo(0f, size.height)
+                close()
+            }
+            drawPath(path, color = Color(0xFFF9F9F9))
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp)
+                .padding(top = 48.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Home",
+                    style = MaterialTheme.typography.headlineLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = DarkBrown,
+                    fontSize = 36.sp
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Welcome back,",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = DarkBrown.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = "$userName!",
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = DarkBrown.copy(alpha = 0.7f),
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Box {
+                Icon(
+                    imageVector = Icons.Outlined.Notifications,
+                    contentDescription = null,
+                    tint = DarkBrown,
+                    modifier = Modifier.size(28.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .size(8.dp)
+                        .background(Color.Red, CircleShape)
+                )
+            }
+        }
+        
+        // House Image Placeholder
+        Surface(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 40.dp, end = 24.dp)
+                .size(180.dp, 120.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = Color.White.copy(alpha = 0.5f)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                 Icon(Icons.Default.Home, contentDescription = null, tint = DarkBrown.copy(alpha = 0.1f), modifier = Modifier.size(48.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun OverviewCard(
+    totalDevices: Int,
+    totalFloors: Int,
+    devicesOn: Int,
+    devicesError: Int,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White)
+    ) {
+        Column(modifier = Modifier.padding(20.dp)) {
+            Text(
+                text = "Smart Home Overview",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = DarkBrown
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                OverviewItem(icon = Icons.Default.Power, count = totalDevices, label = "Devices", iconColor = Color(0xFF5D4037))
+                OverviewItem(icon = Icons.Default.CheckCircle, count = totalFloors, label = "Floors", iconColor = Color(0xFF4CAF50))
+                OverviewItem(icon = Icons.Default.PowerSettingsNew, count = devicesOn, label = "ON", iconColor = Color(0xFFFFB74D))
+                OverviewItem(icon = Icons.Default.Warning, count = devicesError, label = "Error", iconColor = Color(0xFFEF5350))
+            }
+        }
+    }
+}
+
+@Composable
+private fun OverviewItem(icon: ImageVector, count: Int, label: String, iconColor: Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .background(iconColor.copy(alpha = 0.1f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(imageVector = icon, contentDescription = null, tint = iconColor, modifier = Modifier.size(20.dp))
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(text = count.toString(), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = DarkBrown)
+        Text(text = label, fontSize = 12.sp, color = Color.Gray)
+    }
+}
+
+@Composable
+private fun SectionHeader(title: String, onViewAll: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = DarkBrown)
+        TextButton(onClick = onViewAll) {
+            Text(text = "View all", color = Color.Gray)
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun ActivityList(
+    notifications: List<com.example.smarthome.data.model.Notification>,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(vertical = 8.dp)) {
+            if (notifications.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No recent activity",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                }
+            } else {
+                notifications.forEach { notification ->
+                    val dateFormat = SimpleDateFormat("MMM dd, HH:mm", Locale.getDefault())
+                    val dateStr = dateFormat.format(Date(notification.timestamp))
+                    
+                    val color = when(notification.type) {
+                        "SAFETY" -> Color(0xFFEF5350)
+                        "ALERT" -> Color(0xFFFFB74D)
+                        else -> Color(0xFF42A5F5)
+                    }
+                    
+                    val icon = when(notification.type) {
+                        "SAFETY" -> Icons.Default.Warning
+                        "ALERT" -> Icons.Default.Notifications
+                        else -> Icons.Default.Info
+                    }
+
+                    ActivityItem(
+                        ActivityItemData(
+                            description = notification.title,
+                            time = dateStr,
+                            color = color,
+                            icon = icon
+                        )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActivityItem(data: ActivityItemData) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(data.color.copy(alpha = 0.1f), CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(imageVector = data.icon, contentDescription = null, tint = data.color, modifier = Modifier.size(20.dp))
+        }
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(text = data.description, fontWeight = FontWeight.Medium, fontSize = 14.sp, color = DarkBrown)
+            Text(text = data.time, fontSize = 12.sp, color = Color.Gray)
+        }
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = Color.LightGray)
+    }
+}
+
+data class ActivityItemData(val description: String, val time: String, val color: Color, val icon: ImageVector)

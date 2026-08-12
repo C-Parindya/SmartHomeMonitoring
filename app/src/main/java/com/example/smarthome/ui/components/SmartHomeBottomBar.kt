@@ -1,22 +1,28 @@
 package com.example.smarthome.ui.components
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Layers
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.smarthome.ui.navigation.Screen
 import com.example.smarthome.ui.theme.DarkBrown
 import com.example.smarthome.ui.theme.NavColor
 
 data class BottomNavItem(
     val label: String,
-    val icon: ImageVector,
+    val selectedIcon: ImageVector,
+    val unselectedIcon: ImageVector,
     val screen: Screen
 )
 
@@ -26,31 +32,32 @@ fun SmartHomeBottomBar(
     onNavigate: (Screen) -> Unit
 ) {
     val items = listOf(
-        BottomNavItem("Home", Icons.Default.Home, Screen.Home),
-        BottomNavItem("Floor Map", Icons.Default.Layers, Screen.FloorMap),
-        BottomNavItem("Notification", Icons.Default.Notifications, Screen.Notification),
-        BottomNavItem("Profile", Icons.Default.Person, Screen.Profile)
+        BottomNavItem("Home", Icons.Default.Home, Icons.Outlined.Home, Screen.Home),
+        BottomNavItem("Floor Map", Icons.Default.Layers, Icons.Outlined.Layers, Screen.FloorMap),
+        BottomNavItem("Notification", Icons.Default.Notifications, Icons.Outlined.Notifications, Screen.Notification),
+        BottomNavItem("Profile", Icons.Default.Person, Icons.Outlined.Person, Screen.Profile)
     )
 
     NavigationBar(
-        containerColor = NavColor,
-        contentColor = DarkBrown
+        containerColor = Color.White,
+        contentColor = DarkBrown,
+        tonalElevation = 8.dp
     ) {
         items.forEach { item ->
             val isSelected = currentRoute == item.screen.route
             NavigationBarItem(
                 selected = isSelected,
                 onClick = { onNavigate(item.screen) },
-                label = { Text(item.label, color = DarkBrown) },
+                label = { Text(item.label, color = if (isSelected) DarkBrown else DarkBrown.copy(alpha = 0.6f), fontSize = 10.sp) },
                 icon = {
                     Icon(
-                        imageVector = item.icon,
+                        imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
                         contentDescription = item.label,
                         tint = if (isSelected) DarkBrown else DarkBrown.copy(alpha = 0.6f)
                     )
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = DarkBrown.copy(alpha = 0.1f),
+                    indicatorColor = Color(0xFFF3E5DC),
                     selectedIconColor = DarkBrown,
                     unselectedIconColor = DarkBrown.copy(alpha = 0.6f),
                     selectedTextColor = DarkBrown,

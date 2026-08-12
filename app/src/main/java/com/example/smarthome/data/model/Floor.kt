@@ -11,5 +11,5 @@ data class Floor(
     val devices: List<Device> = emptyList(),
     val areas: List<Area> = emptyList()
 ) {
-    val deviceCount: Int get() = devices.size
+    val deviceCount: Int get() = devices.size + areas.sumOf { it.devices.size }
 }
