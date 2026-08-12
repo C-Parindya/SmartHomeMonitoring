@@ -8,6 +8,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.smarthome.ui.theme.DarkBrown
 import com.example.smarthome.ui.theme.NavColor
@@ -21,6 +22,8 @@ import com.example.smarthome.ui.components.SmartHomeBottomBar
 import com.example.smarthome.ui.components.SmartHomeTopBar
 import com.example.smarthome.ui.navigation.Screen
 import com.example.smarthome.ui.screens.home.HomeScreen
+import com.example.smarthome.ui.components.ScreenHeader
+import com.example.smarthome.ui.components.SectionTitle
 import com.example.smarthome.ui.screens.floors.FloorListScreen
 import com.example.smarthome.ui.screens.settings.ProfileScreen
 import com.example.smarthome.viewmodel.NotificationViewModel
@@ -62,28 +65,33 @@ fun MainScreen(
 
     Scaffold(
         topBar = {
-            SmartHomeTopBar(
-                title = title,
-                showBack = false,
-                actions = {
-                    if (currentRoute == Screen.Home.route) {
-                        IconButton(onClick = onNavigateToUsageReport) {
-                            Icon(
-                                imageVector = Icons.Outlined.BarChart,
-                                contentDescription = "Usage report"
-                            )
-                        }
-                    } else if (currentRoute == Screen.Notification.route) {
-                        val notificationViewModel: NotificationViewModel = viewModel(factory = viewModelFactory)
-                        IconButton(onClick = { notificationViewModel.clearNotifications() }) {
-                            Icon(
-                                imageVector = Icons.Outlined.DeleteSweep,
-                                contentDescription = "Clear all"
-                            )
+            if (currentRoute != Screen.FloorMap.route && 
+                currentRoute != Screen.Home.route &&
+                currentRoute != Screen.Notification.route &&
+                currentRoute != Screen.Profile.route) {
+                SmartHomeTopBar(
+                    title = title,
+                    showBack = false,
+                    actions = {
+                        if (currentRoute == Screen.Home.route) {
+                            IconButton(onClick = onNavigateToUsageReport) {
+                                Icon(
+                                    imageVector = Icons.Outlined.BarChart,
+                                    contentDescription = "Usage report"
+                                )
+                            }
+                        } else if (currentRoute == Screen.Notification.route) {
+                            val notificationViewModel: NotificationViewModel = viewModel(factory = viewModelFactory)
+                            IconButton(onClick = { notificationViewModel.clearNotifications() }) {
+                                Icon(
+                                    imageVector = Icons.Outlined.DeleteSweep,
+                                    contentDescription = "Clear all"
+                                )
+                            }
                         }
                     }
-                }
-            )
+                )
+            }
         },
         bottomBar = {
             SmartHomeBottomBar(
@@ -107,6 +115,15 @@ fun MainScreen(
         ) {
             composable(Screen.Home.route) {
                 HomeScreen(
+                    onViewAllActivity = {
+                        navController.navigate(Screen.Notification.route) {
+                            popUpTo(navController.graph.startDestinationId) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
                     viewModel = viewModel(factory = viewModelFactory)
                 )
             }
@@ -120,23 +137,79 @@ fun MainScreen(
                 val notificationViewModel: NotificationViewModel = viewModel(factory = viewModelFactory)
                 val notifications by notificationViewModel.notifications.collectAsStateWithLifecycle()
 
-                if (notifications.isEmpty()) {
-                    Column(
-                        modifier = Modifier.fillMaxSize().padding(16.dp),
-                        verticalArrangement = Arrangement.Center,
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Icon(Icons.Default.Notifications, contentDescription = null, modifier = Modifier.size(64.dp), tint = DarkBrown)
-                        Text("No new notifications", style = MaterialTheme.typography.titleLarge)
+                Scaffold(
+                    containerColor = Color.White,
+                    topBar = {
+                        // Empty spacer to handle edge-to-edge if needed, 
+                        // but we'll let ScreenHeader handle the visual top
                     }
-                } else {
+                ) { innerPadding ->
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(16.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = innerPadding.calculateBottomPadding()),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(notifications, key = { it.id }) { notification ->
-                            NotificationItem(notification)
+                        item {
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                ScreenHeader(
+                                    title = "Notifications",
+                                    subtitle = "Stay updated with\nyour home events",
+                                    icon = Icons.Default.Notifications
+                                )
+                                
+                                // Clear all button overlay for notifications
+                                IconButton(
+                                    onClick = { notificationViewModel.clearNotifications() },
+                                    modifier = Modifier
+                                        .align(Alignment.TopEnd)
+                                        .padding(top = 48.dp, end = 16.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.DeleteSweep,
+                                        contentDescription = "Clear all",
+                                        tint = DarkBrown
+                                    )
+                                }
+                            }
+                        }
+
+                        item {
+                            SectionTitle(text = "Recent Alerts")
+                        }
+
+                        if (notifications.isEmpty()) {
+                            item {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 64.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Icon(
+                                        Icons.Default.Notifications, 
+                                        contentDescription = null, 
+                                        modifier = Modifier.size(64.dp), 
+                                        tint = Color.LightGray.copy(alpha = 0.5f)
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        "No new notifications", 
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = Color.Gray
+                                    )
+                                }
+                            }
+                        } else {
+                            items(notifications, key = { it.id }) { notification ->
+                                Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) {
+                                    NotificationItem(notification)
+                                }
+                            }
+                        }
+                        
+                        item {
+                            Spacer(modifier = Modifier.height(32.dp))
                         }
                     }
                 }
@@ -158,13 +231,17 @@ fun NotificationItem(notification: com.example.smarthome.data.model.Notification
 
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (notification.type == "SAFETY") 
-                MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.2f) 
+                Color(0xFFFEF2F2) // Very light red
             else 
-                MaterialTheme.colorScheme.surface
+                Color.White
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        border = if (notification.type == "SAFETY") 
+            androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFEE2E2)) 
+        else null
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
