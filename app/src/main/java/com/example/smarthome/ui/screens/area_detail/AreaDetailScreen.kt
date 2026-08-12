@@ -63,7 +63,7 @@ fun AreaDetailScreen(
                             style = MaterialTheme.typography.titleMedium
                         )
                         Text(
-                            text = "Tap cell for details/delete, tap power icon to toggle.",
+                            text = "Tap cell to toggle, tap edit icon for details.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
