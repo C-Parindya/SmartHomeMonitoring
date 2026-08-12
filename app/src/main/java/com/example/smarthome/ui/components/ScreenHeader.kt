@@ -85,7 +85,7 @@ fun ScreenHeader(
                     fontWeight = FontWeight.Medium
                 )
             }
-            
+
             if (icon != null) {
                 Surface(
                     modifier = Modifier
@@ -96,8 +96,8 @@ fun ScreenHeader(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = icon, 
-                            contentDescription = null, 
+                            imageVector = icon,
+                            contentDescription = null,
                             tint = DarkBrown.copy(alpha = 0.2f),
                             modifier = Modifier.size(48.dp)
                         )

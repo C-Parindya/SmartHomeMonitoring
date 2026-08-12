@@ -32,4 +32,11 @@ class ProfileViewModel(
     fun logout() {
         repository.logout()
     }
+
+    fun updateProfile(displayName: String, onResult: (Result<Unit>) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.updateProfile(displayName)
+            onResult(result)
+        }
+    }
 }

@@ -10,6 +10,7 @@ import com.example.smarthome.data.model.UserProfile
 import com.example.smarthome.util.NotificationHelper
 import com.example.smarthome.SmartHomeApp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
@@ -133,6 +134,24 @@ class MockSmartHomeRepository {
             _currentUser.value = user
             _isLoading.value = false
             Result.success(user)
+        } catch (e: Exception) {
+            _isLoading.value = false
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateProfile(displayName: String): Result<Unit> {
+        _isLoading.value = true
+        return try {
+            val user = auth.currentUser ?: throw Exception("User not logged in")
+            val profileUpdates = UserProfileChangeRequest.Builder()
+                .setDisplayName(displayName)
+                .build()
+            
+            user.updateProfile(profileUpdates).await()
+            _currentUser.value = _currentUser.value?.copy(displayName = displayName)
+            _isLoading.value = false
+            Result.success(Unit)
         } catch (e: Exception) {
             _isLoading.value = false
             Result.failure(e)
