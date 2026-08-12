@@ -166,20 +166,6 @@ private fun HomeHeader(userName: String) {
                 )
             }
         }
-        
-        // House Image Placeholder
-        Surface(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 40.dp, end = 24.dp)
-                .size(180.dp, 120.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = Color.White.copy(alpha = 0.5f)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                 Icon(Icons.Default.Home, contentDescription = null, tint = DarkBrown.copy(alpha = 0.1f), modifier = Modifier.size(48.dp))
-            }
-        }
     }
 }
 

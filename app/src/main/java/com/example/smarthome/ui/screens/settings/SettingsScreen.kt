@@ -44,8 +44,7 @@ fun ProfileScreen(
             item {
                 ScreenHeader(
                     title = "Profile",
-                    subtitle = "Manage your account\nand preferences",
-                    icon = Icons.Outlined.AccountCircle
+                    subtitle = "Manage your account\nand preferences"
                 )
             }
 
