@@ -1,5 +1,7 @@
 package com.example.smarthome.ui.screens.device
 
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,9 +21,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -35,7 +40,10 @@ import com.example.smarthome.data.model.ScheduledKind
 import com.example.smarthome.ui.components.LoadingState
 import com.example.smarthome.ui.components.SmartHomeTopBar
 import com.example.smarthome.ui.components.StatusBadge
+import com.example.smarthome.ui.components.TimePickerDialog
 import com.example.smarthome.viewmodel.DeviceControlViewModel
+import java.text.SimpleDateFormat
+import java.util.Locale
 
 @Composable
 fun ScheduledControlScreen(
@@ -65,6 +73,7 @@ fun ScheduledControlScreen(
                 device = device,
                 onToggle = viewModel::toggleScheduledDevice,
                 onSaveSchedule = viewModel::updateSchedule,
+                onBack = onBack,
                 modifier = Modifier.padding(padding)
             )
         }
@@ -76,11 +85,25 @@ private fun ScheduledControlContent(
     device: Device,
     onToggle: () -> Unit,
     onSaveSchedule: (Int, String?, String?) -> Unit,
+    onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var maxDuration by rememberSaveable(device.id) { mutableStateOf(device.maxDurationMinutes.toFloat()) }
     var onTime by rememberSaveable(device.id) { mutableStateOf(device.onTime ?: "") }
     var offTime by rememberSaveable(device.id) { mutableStateOf(device.offTime ?: "") }
+
+    val format24 = SimpleDateFormat("HH:mm", Locale.getDefault())
+    val format12 = SimpleDateFormat("hh:mm a", Locale.getDefault())
+
+    fun formatToDisplay(timeStr: String): String {
+        if (timeStr.isBlank()) return "Not set"
+        return try {
+            val date = format24.parse(timeStr)
+            format12.format(date!!)
+        } catch (e: Exception) {
+            timeStr
+        }
+    }
 
     Column(
         modifier = modifier
@@ -151,31 +174,88 @@ private fun ScheduledControlContent(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text("Schedule", style = MaterialTheme.typography.titleMedium)
-                OutlinedTextField(
-                    value = onTime,
-                    onValueChange = { onTime = it },
-                    label = { Text("On Time (HH:mm)") },
+                
+                var showOnPicker by remember { mutableStateOf(false) }
+                var showOffPicker by remember { mutableStateOf(false) }
+
+                Row(
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = offTime,
-                    onValueChange = { offTime = it },
-                    label = { Text("Off Time (HH:mm)") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-                Button(
-                    onClick = {
-                        onSaveSchedule(
-                            maxDuration.toInt(),
-                            onTime.ifBlank { null },
-                            offTime.ifBlank { null }
-                        )
-                    },
-                    modifier = Modifier.fillMaxWidth()
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text("Save Schedule")
+                    val onInteractionSource = remember { MutableInteractionSource() }
+                    val isOnPressed by onInteractionSource.collectIsPressedAsState()
+                    LaunchedEffect(isOnPressed) { if (isOnPressed) showOnPicker = true }
+
+                    OutlinedTextField(
+                        value = formatToDisplay(onTime),
+                        onValueChange = { },
+                        label = { Text("On Time") },
+                        modifier = Modifier.weight(1f),
+                        readOnly = true,
+                        interactionSource = onInteractionSource
+                    )
+
+                    val offInteractionSource = remember { MutableInteractionSource() }
+                    val isOffPressed by offInteractionSource.collectIsPressedAsState()
+                    LaunchedEffect(isOffPressed) { if (isOffPressed) showOffPicker = true }
+
+                    OutlinedTextField(
+                        value = formatToDisplay(offTime),
+                        onValueChange = { },
+                        label = { Text("Off Time") },
+                        modifier = Modifier.weight(1f),
+                        readOnly = true,
+                        interactionSource = offInteractionSource
+                    )
+                }
+                
+                if (showOnPicker) {
+                    TimePickerDialog(
+                        onDismiss = { showOnPicker = false },
+                        onConfirm = { h, m ->
+                            onTime = "%02d:%02d".format(h, m)
+                            showOnPicker = false
+                        }
+                    )
+                }
+                
+                if (showOffPicker) {
+                    TimePickerDialog(
+                        onDismiss = { showOffPicker = false },
+                        onConfirm = { h, m ->
+                            offTime = "%02d:%02d".format(h, m)
+                            showOffPicker = false
+                        }
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            onSaveSchedule(
+                                maxDuration.toInt(),
+                                onTime.ifBlank { null },
+                                offTime.ifBlank { null }
+                            )
+                            onBack()
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Save Schedule")
+                    }
+                    
+                    TextButton(
+                        onClick = {
+                            onTime = ""
+                            offTime = ""
+                            onSaveSchedule(maxDuration.toInt(), null, null)
+                        }
+                    ) {
+                        Text("Clear")
+                    }
                 }
             }
         }
