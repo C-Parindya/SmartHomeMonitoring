@@ -85,19 +85,19 @@ fun ScreenHeader(
                     fontWeight = FontWeight.Medium
                 )
             }
-            
+
             if (icon != null) {
                 Surface(
                     modifier = Modifier
-                        .size(160.dp, 120.dp)
+                        .size(120.dp, 100.dp)
                         .offset(y = 20.dp),
                     shape = RoundedCornerShape(24.dp),
                     color = Color.White.copy(alpha = 0.5f)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
-                            imageVector = icon, 
-                            contentDescription = null, 
+                            imageVector = icon,
+                            contentDescription = null,
                             tint = DarkBrown.copy(alpha = 0.2f),
                             modifier = Modifier.size(48.dp)
                         )

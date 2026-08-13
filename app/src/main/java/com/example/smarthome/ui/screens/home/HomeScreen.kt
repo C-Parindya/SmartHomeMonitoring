@@ -166,7 +166,7 @@ private fun HomeHeader(userName: String) {
                 )
             }
         }
-        
+
         // House Image Placeholder
         Surface(
             modifier = Modifier

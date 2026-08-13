@@ -26,6 +26,7 @@ import com.example.smarthome.ui.components.ScreenHeader
 import com.example.smarthome.ui.components.SectionTitle
 import com.example.smarthome.ui.screens.floors.FloorListScreen
 import com.example.smarthome.ui.screens.settings.ProfileScreen
+import com.example.smarthome.ui.screens.settings.EditProfileScreen
 import com.example.smarthome.viewmodel.NotificationViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.smarthome.viewmodel.SmartHomeViewModelFactory
@@ -154,8 +155,7 @@ fun MainScreen(
                             Box(modifier = Modifier.fillMaxWidth()) {
                                 ScreenHeader(
                                     title = "Notifications",
-                                    subtitle = "Stay updated with\nyour home events",
-                                    icon = Icons.Default.Notifications
+                                    subtitle = "Stay updated with\nyour home events"
                                 )
                                 
                                 // Clear all button overlay for notifications
@@ -217,6 +217,13 @@ fun MainScreen(
             composable(Screen.Profile.route) {
                 ProfileScreen(
                     onLogout = onLogout,
+                    onEditProfile = { navController.navigate(Screen.EditProfile.route) },
+                    viewModel = viewModel(factory = viewModelFactory)
+                )
+            }
+            composable(Screen.EditProfile.route) {
+                EditProfileScreen(
+                    onBack = { navController.popBackStack() },
                     viewModel = viewModel(factory = viewModelFactory)
                 )
             }
