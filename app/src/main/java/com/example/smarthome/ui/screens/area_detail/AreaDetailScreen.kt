@@ -28,6 +28,7 @@ fun AreaDetailScreen(
     floorId: String,
     areaId: String,
     onBack: () -> Unit,
+    onNavigateToDeviceControl: (Device) -> Unit,
     viewModel: AreaDetailViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -123,6 +124,10 @@ fun AreaDetailScreen(
         DeviceDetailsDialog(
             device = uiState.selectedDevice!!,
             onDismiss = viewModel::dismissDeviceDetailsDialog,
+            onControl = { 
+                viewModel.dismissDeviceDetailsDialog()
+                onNavigateToDeviceControl(it) 
+            },
             onEdit = { viewModel.onEditDeviceClick(it) },
             onDelete = viewModel::deleteDevice
         )
@@ -159,6 +164,7 @@ private fun EmptyGridCell(onClick: () -> Unit) {
 private fun DeviceDetailsDialog(
     device: Device,
     onDismiss: () -> Unit,
+    onControl: (Device) -> Unit,
     onEdit: (Device) -> Unit,
     onDelete: () -> Unit
 ) {
@@ -173,11 +179,16 @@ private fun DeviceDetailsDialog(
                 if (device.maxDurationMinutes > 0) {
                     Text("Auto-Off Timer: ${device.maxDurationMinutes} mins", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
                 }
+                if (!device.onTime.isNullOrBlank() || !device.offTime.isNullOrBlank()) {
+                    Text("Schedule: ${device.onTime ?: "--"} to ${device.offTime ?: "--"}", 
+                        style = MaterialTheme.typography.bodyMedium, 
+                        color = MaterialTheme.colorScheme.secondary)
+                }
             }
         },
         confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Close")
+            TextButton(onClick = { onControl(device) }) {
+                Text("Schedule")
             }
         },
         dismissButton = {

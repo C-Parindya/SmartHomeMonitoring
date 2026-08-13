@@ -115,8 +115,6 @@ fun FloorDetailScreen(
         AddAreaDialog(
             name = uiState.newAreaName,
             onNameChange = viewModel::onNewAreaNameChange,
-            type = uiState.newAreaType,
-            onTypeChange = viewModel::onNewAreaTypeChange,
             onDismiss = viewModel::dismissAddAreaDialog,
             onConfirm = viewModel::addArea
         )
@@ -128,8 +126,6 @@ fun FloorDetailScreen(
             confirmLabel = "Update",
             name = uiState.newAreaName,
             onNameChange = viewModel::onNewAreaNameChange,
-            type = uiState.newAreaType,
-            onTypeChange = viewModel::onNewAreaTypeChange,
             onDismiss = viewModel::dismissAddAreaDialog,
             onConfirm = viewModel::updateArea
         )
@@ -194,11 +190,6 @@ private fun AreaCard(
                     text = area.name,
                     style = MaterialTheme.typography.titleMedium,
                     color = DarkBrown
-                )
-                Text(
-                    text = area.type,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = DarkBrown.copy(alpha = 0.7f)
                 )
             }
             
@@ -267,8 +258,6 @@ private fun AddAreaDialog(
     confirmLabel: String = "Add",
     name: String,
     onNameChange: (String) -> Unit,
-    type: String,
-    onTypeChange: (String) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
@@ -283,23 +272,6 @@ private fun AddAreaDialog(
                     label = { Text("Area Name (e.g. Kitchen)") },
                     singleLine = true
                 )
-                
-                Text("Type:", style = MaterialTheme.typography.labelMedium)
-                val types = listOf("Room", "Kitchen", "Bathroom", "Living Room", "Bedroom", "Other")
-                
-                Column {
-                    types.chunked(3).forEach { rowTypes ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            rowTypes.forEach { areaType ->
-                                FilterChip(
-                                    selected = type == areaType,
-                                    onClick = { onTypeChange(areaType) },
-                                    label = { Text(areaType) }
-                                )
-                            }
-                        }
-                    }
-                }
             }
         },
         confirmButton = {

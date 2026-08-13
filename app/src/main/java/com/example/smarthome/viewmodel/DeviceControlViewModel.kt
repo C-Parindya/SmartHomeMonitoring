@@ -27,7 +27,8 @@ class DeviceControlViewModel(
     init {
         viewModelScope.launch {
             repository.floors.collect { floors ->
-                val device = floors.flatMap { it.devices }.find { it.id == deviceId }
+                val allDevices = floors.flatMap { it.devices + it.areas.flatMap { area -> area.devices } }
+                val device = allDevices.find { it.id == deviceId }
                 _uiState.update { it.copy(device = device, isLoading = false) }
             }
         }
