@@ -9,6 +9,9 @@ import com.example.smarthome.data.model.UsageStat
 import com.example.smarthome.data.model.UserProfile
 import com.example.smarthome.util.NotificationHelper
 import com.example.smarthome.SmartHomeApp
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.database.DataSnapshot
@@ -67,6 +70,74 @@ class MockSmartHomeRepository {
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
+
+    init {
+        // Start background scheduler
+        timerScope.launch {
+            while (true) {
+                try {
+                    checkSchedules()
+                } catch (e: Exception) {
+                    android.util.Log.e("MockSmartHomeRepository", "Schedule check failed", e)
+                }
+                delay(30000) // Check every 30 seconds for better accuracy
+            }
+        }
+    }
+
+    private var lastCheckedMinute: String = ""
+
+    private fun checkSchedules() {
+        val currentTime = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date())
+        if (currentTime == lastCheckedMinute) return
+        
+        val userId = auth.currentUser?.uid ?: return
+        lastCheckedMinute = currentTime
+        
+        android.util.Log.d("MockSmartHomeRepository", "Checking schedules for time: $currentTime")
+        
+        floors.value.forEach { floor ->
+            // Check direct devices
+            floor.devices.forEach { device ->
+                checkDeviceSchedule(device, currentTime)
+            }
+            // Check area devices
+            floor.areas.forEach { area ->
+                area.devices.forEach { device ->
+                    checkDeviceSchedule(device, currentTime)
+                }
+            }
+        }
+    }
+
+    private fun checkDeviceSchedule(device: Device, currentTime: String) {
+        var updated = false
+        var newState = device.state
+        
+        if (device.onTime == currentTime && device.state != DeviceState.ON) {
+            newState = DeviceState.ON
+            updated = true
+        } else if (device.offTime == currentTime && device.state != DeviceState.OFF) {
+            newState = DeviceState.OFF
+            updated = true
+        }
+        
+        if (updated) {
+            updateDevice(device.id) { currentDevice ->
+                if (currentDevice.type == com.example.smarthome.data.model.DeviceType.MULTI_SWITCH) {
+                    val updatedSwitches = currentDevice.switches.map { it.copy(isOn = newState == DeviceState.ON) }
+                    currentDevice.copy(state = newState, switches = updatedSwitches)
+                } else {
+                    currentDevice.copy(state = newState)
+                }
+            }
+            addNotification(
+                title = "Scheduled Action",
+                message = "${device.name} has been turned ${if (newState == DeviceState.ON) "ON" else "OFF"} by schedule.",
+                type = "INFO"
+            )
+        }
+    }
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val notifications: StateFlow<List<Notification>> = _currentUser.flatMapLatest { user ->
@@ -353,7 +424,7 @@ class MockSmartHomeRepository {
     ) {
         updateDevice(deviceId) { device ->
             device.copy(
-                maxDurationMinutes = maxDurationMinutes.coerceIn(1, 480),
+                maxDurationMinutes = maxDurationMinutes.coerceIn(0, 480),
                 onTime = onTime,
                 offTime = offTime
             )
@@ -378,25 +449,41 @@ class MockSmartHomeRepository {
         var deviceAfterTransform: Device? = null
 
         currentFloors.forEach { floor ->
+            var floorUpdated = false
+            
+            // Check direct devices
+            val updatedFloorDevices = floor.devices.map { device ->
+                if (device.id == deviceId) {
+                    val newDevice = transform(device)
+                    deviceAfterTransform = newDevice
+                    floorUpdated = true
+                    newDevice
+                } else {
+                    device
+                }
+            }
+
+            // Check area devices
             val updatedAreas = floor.areas.map { area ->
-                val updatedDevices = area.devices.map { device ->
+                val updatedAreaDevices = area.devices.map { device ->
                     if (device.id == deviceId) {
                         val newDevice = transform(device)
                         deviceAfterTransform = newDevice
+                        floorUpdated = true
                         newDevice
                     } else {
                         device
                     }
                 }
-                if (updatedDevices != area.devices) {
-                    area.copy(devices = updatedDevices)
+                if (updatedAreaDevices != area.devices) {
+                    area.copy(devices = updatedAreaDevices)
                 } else {
                     area
                 }
             }
             
-            if (updatedAreas != floor.areas) {
-                floorToUpdate = floor.copy(areas = updatedAreas)
+            if (floorUpdated) {
+                floorToUpdate = floor.copy(devices = updatedFloorDevices, areas = updatedAreas)
             }
         }
         
