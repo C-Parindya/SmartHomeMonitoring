@@ -1,29 +1,29 @@
 package com.example.smarthome.ui.components
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.smarthome.R
 import com.example.smarthome.ui.theme.DarkBrown
 
 @Composable
 fun ScreenHeader(
     title: String,
-    subtitle: String,
-    icon: ImageVector? = null
+    subtitle: String
 ) {
     Box(
         modifier = Modifier
@@ -31,12 +31,14 @@ fun ScreenHeader(
             .height(300.dp)
             .background(Color.White)
     ) {
-        // Top Background (Beige)
-        Box(
+        // Header Background Image
+        Image(
+            painter = painterResource(id = R.drawable.homescreen),
+            contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.85f)
-                .background(Color(0xFFD0B29A).copy(alpha = 0.4f))
+                .fillMaxHeight(0.85f),
+            contentScale = ContentScale.Crop
         )
 
         // Wavy separation
@@ -84,25 +86,6 @@ fun ScreenHeader(
                     lineHeight = 24.sp,
                     fontWeight = FontWeight.Medium
                 )
-            }
-
-            if (icon != null) {
-                Surface(
-                    modifier = Modifier
-                        .size(120.dp, 100.dp)
-                        .offset(y = 20.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    color = Color.White.copy(alpha = 0.5f)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = DarkBrown.copy(alpha = 0.2f),
-                            modifier = Modifier.size(48.dp)
-                        )
-                    }
-                }
             }
         }
     }

@@ -2,6 +2,7 @@ package com.example.smarthome.ui.screens.login
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
@@ -129,18 +131,35 @@ fun LoginScreen(
                         Text(
                             text = error,
                             color = Color(0xFFE53935),
+                            fontSize = 13.sp,
+                            modifier = Modifier.align(Alignment.Start)
+                        )
+                    }
+
+                    uiState.successMessage?.let { msg ->
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = msg,
+                            color = Color(0xFF43A047),
+                            fontSize = 13.sp,
                             modifier = Modifier.align(Alignment.Start)
                         )
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    Text(
-                        text = "Demo: Forgot Password?",
-                        color = WarmBrown.copy(alpha = 0.7f),
-                        fontSize = 12.sp,
-                        modifier = Modifier.align(Alignment.Start)
-                    )
+                    TextButton(
+                        onClick = viewModel::resetPassword,
+                        modifier = Modifier.align(Alignment.End),
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text(
+                            text = "Forgot Password?",
+                            color = WarmBrown,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(20.dp))
 

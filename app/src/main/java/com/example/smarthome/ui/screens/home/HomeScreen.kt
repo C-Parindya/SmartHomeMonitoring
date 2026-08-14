@@ -1,6 +1,7 @@
 package com.example.smarthome.ui.screens.home
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +20,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -92,12 +95,14 @@ private fun HomeHeader(userName: String) {
             .height(280.dp)
             .background(Color.White)
     ) {
-        // Top Background (Beige)
-        Box(
+        // Header Background Image
+        Image(
+            painter = painterResource(id = com.example.smarthome.R.drawable.homescreen),
+            contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(0.85f)
-                .background(Color(0xFFD0B29A).copy(alpha = 0.2f))
+                .fillMaxHeight(0.85f),
+            contentScale = ContentScale.Crop
         )
 
         // Wavy separation
@@ -130,54 +135,19 @@ private fun HomeHeader(userName: String) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "Home",
-                    style = MaterialTheme.typography.headlineLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = DarkBrown,
-                    fontSize = 36.sp
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
                     text = "Welcome back,",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = DarkBrown.copy(alpha = 0.7f),
-                    fontWeight = FontWeight.Medium
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = DarkBrown,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 28.sp
                 )
                 Text(
                     text = "$userName!",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = DarkBrown.copy(alpha = 0.7f),
-                    fontWeight = FontWeight.Medium
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = DarkBrown,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 28.sp
                 )
-            }
-
-            Box {
-                Icon(
-                    imageVector = Icons.Outlined.Notifications,
-                    contentDescription = null,
-                    tint = DarkBrown,
-                    modifier = Modifier.size(28.dp)
-                )
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .size(8.dp)
-                        .background(Color.Red, CircleShape)
-                )
-            }
-        }
-
-        // House Image Placeholder
-        Surface(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 40.dp, end = 24.dp)
-                .size(180.dp, 120.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = Color.White.copy(alpha = 0.5f)
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                 Icon(Icons.Default.Home, contentDescription = null, tint = DarkBrown.copy(alpha = 0.1f), modifier = Modifier.size(48.dp))
             }
         }
     }
