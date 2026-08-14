@@ -29,13 +29,13 @@ import com.example.smarthome.viewmodel.FloorDetailViewModel
 
 @Composable
 fun FloorDetailScreen(
-    floorId: String,
     onBack: () -> Unit,
     onAreaClick: (String, String) -> Unit,
     viewModel: FloorDetailViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var areaToDelete by remember { mutableStateOf<Area?>(null) }
+    val areaToDeleteState = remember { mutableStateOf<Area?>(null) }
+    val areaToDelete = areaToDeleteState.value
 
     Scaffold(
         topBar = {
@@ -101,7 +101,7 @@ fun FloorDetailScreen(
                             AreaCard(
                                 area = area,
                                 onEdit = { viewModel.showEditAreaDialog(area) },
-                                onDelete = { areaToDelete = area },
+                                onDelete = { areaToDeleteState.value = area },
                                 onClick = { onAreaClick(floor.id, area.id) }
                             )
                         }
@@ -133,14 +133,14 @@ fun FloorDetailScreen(
 
     areaToDelete?.let { area ->
         AlertDialog(
-            onDismissRequest = { areaToDelete = null },
+            onDismissRequest = { areaToDeleteState.value = null },
             title = { Text("Delete Area") },
             text = { Text("Are you sure you want to delete '${area.name}'? This will also remove all devices in this area.") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         viewModel.deleteArea(area.id)
-                        areaToDelete = null
+                        areaToDeleteState.value = null
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -148,7 +148,7 @@ fun FloorDetailScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { areaToDelete = null }) {
+                TextButton(onClick = { areaToDeleteState.value = null }) {
                     Text("Cancel")
                 }
             }
