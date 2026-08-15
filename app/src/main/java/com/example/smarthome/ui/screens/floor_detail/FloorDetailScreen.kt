@@ -29,13 +29,13 @@ import com.example.smarthome.viewmodel.FloorDetailViewModel
 
 @Composable
 fun FloorDetailScreen(
-    floorId: String,
     onBack: () -> Unit,
     onAreaClick: (String, String) -> Unit,
     viewModel: FloorDetailViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var areaToDelete by remember { mutableStateOf<Area?>(null) }
+    val areaToDeleteState = remember { mutableStateOf<Area?>(null) }
+    val areaToDelete = areaToDeleteState.value
 
     Scaffold(
         topBar = {
@@ -101,7 +101,7 @@ fun FloorDetailScreen(
                             AreaCard(
                                 area = area,
                                 onEdit = { viewModel.showEditAreaDialog(area) },
-                                onDelete = { areaToDelete = area },
+                                onDelete = { areaToDeleteState.value = area },
                                 onClick = { onAreaClick(floor.id, area.id) }
                             )
                         }
@@ -127,20 +127,26 @@ fun FloorDetailScreen(
             name = uiState.newAreaName,
             onNameChange = viewModel::onNewAreaNameChange,
             onDismiss = viewModel::dismissAddAreaDialog,
-            onConfirm = viewModel::updateArea
+            onConfirm = viewModel::updateArea,
+            onDelete = {
+                uiState.selectedArea?.let { area ->
+                    areaToDeleteState.value = area
+                    viewModel.dismissAddAreaDialog()
+                }
+            }
         )
     }
 
     areaToDelete?.let { area ->
         AlertDialog(
-            onDismissRequest = { areaToDelete = null },
+            onDismissRequest = { areaToDeleteState.value = null },
             title = { Text("Delete Area") },
             text = { Text("Are you sure you want to delete '${area.name}'? This will also remove all devices in this area.") },
             confirmButton = {
                 TextButton(
                     onClick = {
                         viewModel.deleteArea(area.id)
-                        areaToDelete = null
+                        areaToDeleteState.value = null
                     },
                     colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                 ) {
@@ -148,7 +154,7 @@ fun FloorDetailScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { areaToDelete = null }) {
+                TextButton(onClick = { areaToDeleteState.value = null }) {
                     Text("Cancel")
                 }
             }
@@ -259,7 +265,8 @@ private fun AddAreaDialog(
     name: String,
     onNameChange: (String) -> Unit,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    onDelete: (() -> Unit)? = null
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -270,19 +277,44 @@ private fun AddAreaDialog(
                     value = name,
                     onValueChange = onNameChange,
                     label = { Text("Area Name (e.g. Kitchen)") },
-                    singleLine = true
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         },
         confirmButton = {
-            TextButton(onClick = onConfirm, enabled = name.isNotBlank()) {
-                Text(confirmLabel)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (onDelete != null) {
+                    TextButton(
+                        onClick = onDelete,
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Delete")
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                Button(
+                    onClick = onConfirm,
+                    enabled = name.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkBrown)
+                ) {
+                    Text(confirmLabel)
+                }
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
+        dismissButton = null
     )
 }

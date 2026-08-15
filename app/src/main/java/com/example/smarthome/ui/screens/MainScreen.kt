@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.example.smarthome.ui.theme.DarkBrown
 import com.example.smarthome.ui.theme.NavColor
 import androidx.navigation.NavHostController
@@ -149,61 +150,70 @@ fun MainScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(bottom = innerPadding.calculateBottomPadding()),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         item {
-                            Box(modifier = Modifier.fillMaxWidth()) {
-                                ScreenHeader(
-                                    title = "Notifications",
-                                    subtitle = "Stay updated with\nyour home events"
-                                )
-                                
-                                // Clear all button overlay for notifications
-                                IconButton(
-                                    onClick = { notificationViewModel.clearNotifications() },
-                                    modifier = Modifier
-                                        .align(Alignment.TopEnd)
-                                        .padding(top = 48.dp, end = 16.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Outlined.DeleteSweep,
-                                        contentDescription = "Clear all",
-                                        tint = DarkBrown
-                                    )
-                                }
-                            }
+                            ScreenHeader(
+                                title = "Notifications",
+                                subtitle = "Stay updated with\nyour home events"
+                            )
                         }
 
                         item {
-                            SectionTitle(text = "Recent Alerts")
-                        }
-
-                        if (notifications.isEmpty()) {
-                            item {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(top = 64.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                            Column(modifier = Modifier.offset(y = (-40).dp)) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(
-                                        Icons.Default.Notifications, 
-                                        contentDescription = null, 
-                                        modifier = Modifier.size(64.dp), 
-                                        tint = Color.LightGray.copy(alpha = 0.5f)
-                                    )
-                                    Spacer(modifier = Modifier.height(16.dp))
-                                    Text(
-                                        "No new notifications", 
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = Color.Gray
-                                    )
+                                    SectionTitle(text = "Recent Alerts")
+                                    
+                                    if (notifications.isNotEmpty()) {
+                                        TextButton(
+                                            onClick = { notificationViewModel.clearNotifications() },
+                                            modifier = Modifier.padding(end = 16.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.DeleteSweep,
+                                                contentDescription = "Clear all",
+                                                tint = Color.Gray,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text(
+                                                text = "Clear all",
+                                                color = Color.Gray,
+                                                fontSize = 12.sp
+                                            )
+                                        }
+                                    }
                                 }
-                            }
-                        } else {
-                            items(notifications, key = { it.id }) { notification ->
-                                Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) {
-                                    NotificationItem(notification)
+
+                                if (notifications.isEmpty()) {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 32.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Notifications, 
+                                            contentDescription = null, 
+                                            modifier = Modifier.size(64.dp), 
+                                            tint = Color.LightGray.copy(alpha = 0.5f)
+                                        )
+                                        Spacer(modifier = Modifier.height(16.dp))
+                                        Text(
+                                            "No new notifications", 
+                                            style = MaterialTheme.typography.titleMedium,
+                                            color = Color.Gray
+                                        )
+                                    }
+                                } else {
+                                    notifications.forEach { notification ->
+                                        Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 4.dp)) {
+                                            NotificationItem(notification)
+                                        }
+                                    }
                                 }
                             }
                         }

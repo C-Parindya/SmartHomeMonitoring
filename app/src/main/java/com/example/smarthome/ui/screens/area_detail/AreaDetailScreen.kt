@@ -13,6 +13,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -21,6 +22,7 @@ import com.example.smarthome.ui.components.DeviceGridCell
 import com.example.smarthome.ui.components.EmptyState
 import com.example.smarthome.ui.components.LoadingState
 import com.example.smarthome.ui.components.SmartHomeTopBar
+import com.example.smarthome.ui.theme.DarkBrown
 import com.example.smarthome.viewmodel.AreaDetailViewModel
 
 @Composable
@@ -78,12 +80,14 @@ fun AreaDetailScreen(
                                 modifier = Modifier.padding(16.dp),
                                 verticalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                for (row in 0 until area.gridRows) {
+                                val rows = 8
+                                val cols = 4
+                                for (row in 0 until rows) {
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        for (col in 0 until area.gridCols) {
+                                        for (col in 0 until cols) {
                                             val device = area.devices.find { it.row == row && it.col == col }
                                             Box(modifier = Modifier.weight(1f)) {
                                                 if (device != null) {
@@ -115,14 +119,17 @@ fun AreaDetailScreen(
             onTypeChange = viewModel::onNewDeviceTypeChange,
             timerMinutes = uiState.newDeviceTimer,
             onTimerChange = viewModel::onNewDeviceTimerChange,
+            switchCount = uiState.newDeviceSwitchCount,
+            onSwitchCountChange = viewModel::onNewDeviceSwitchCountChange,
             onDismiss = viewModel::dismissAddDeviceDialog,
             onConfirm = viewModel::addDevice
         )
     }
 
     if (uiState.showDeviceDetailsDialog && uiState.selectedDevice != null) {
+        val currentDevice = uiState.area?.devices?.find { it.id == uiState.selectedDevice!!.id } ?: uiState.selectedDevice!!
         DeviceDetailsDialog(
-            device = uiState.selectedDevice!!,
+            device = currentDevice,
             onDismiss = viewModel::dismissDeviceDetailsDialog,
             onControl = { 
                 viewModel.dismissDeviceDetailsDialog()
@@ -143,6 +150,48 @@ fun AreaDetailScreen(
             onConfirm = viewModel::updateDevice
         )
     }
+
+    if (uiState.showMultiSwitchDialog && uiState.selectedDevice != null) {
+        MultiSwitchDialog(
+            device = uiState.selectedDevice!!,
+            onToggleSwitch = viewModel::toggleIndividualSwitch,
+            onDismiss = viewModel::dismissDeviceDetailsDialog
+        )
+    }
+}
+
+@Composable
+private fun MultiSwitchDialog(
+    device: Device,
+    onToggleSwitch: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(device.name) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                device.switches.forEach { sw ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(sw.name)
+                        Switch(
+                            checked = sw.isOn,
+                            onCheckedChange = { onToggleSwitch(sw.id) }
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Close")
+            }
+        }
+    )
 }
 
 @Composable
@@ -261,6 +310,8 @@ private fun AddDeviceDialog(
     onTypeChange: (String) -> Unit,
     timerMinutes: Int,
     onTimerChange: (Int) -> Unit,
+    switchCount: Int,
+    onSwitchCountChange: (Int) -> Unit,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
@@ -288,8 +339,33 @@ private fun AddDeviceDialog(
                         FilterChip(
                             selected = type == deviceType,
                             onClick = { onTypeChange(deviceType) },
-                            label = { Text(deviceType) }
+                            label = { Text(deviceType) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = DarkBrown,
+                                selectedLabelColor = Color.White
+                            )
                         )
+                    }
+                }
+
+                if (type == "Switch") {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Number of Switches (1-5):", style = MaterialTheme.typography.labelMedium)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        (1..5).forEach { count ->
+                            FilterChip(
+                                selected = switchCount == count,
+                                onClick = { onSwitchCountChange(count) },
+                                label = { Text(count.toString()) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = DarkBrown,
+                                    selectedLabelColor = Color.White
+                                )
+                            )
+                        }
                     }
                 }
 

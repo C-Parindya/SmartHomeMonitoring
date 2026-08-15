@@ -170,7 +170,7 @@ fun RegisterScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(2.dp))
 
                     TextButton(
                         onClick = onBackToLogin,
