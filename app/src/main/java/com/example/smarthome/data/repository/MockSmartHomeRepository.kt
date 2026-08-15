@@ -229,6 +229,15 @@ class MockSmartHomeRepository {
         }
     }
 
+    suspend fun sendPasswordResetEmail(email: String): Result<Unit> {
+        return try {
+            auth.sendPasswordResetEmail(email.trim()).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     fun logout() {
         auth.signOut()
         _currentUser.value = null
@@ -450,7 +459,7 @@ class MockSmartHomeRepository {
 
         currentFloors.forEach { floor ->
             var floorUpdated = false
-            
+
             // Check direct devices
             val updatedFloorDevices = floor.devices.map { device ->
                 if (device.id == deviceId) {
@@ -481,12 +490,12 @@ class MockSmartHomeRepository {
                     area
                 }
             }
-            
+
             if (floorUpdated) {
                 floorToUpdate = floor.copy(devices = updatedFloorDevices, areas = updatedAreas)
             }
         }
-        
+
         floorToUpdate?.let {
             database.getReference("users/$userId/floors/${it.id}").setValue(it)
         }
@@ -494,15 +503,16 @@ class MockSmartHomeRepository {
         // Handle auto-off timer logic
         deviceAfterTransform?.let { device ->
             activeTimers[device.id]?.cancel()
-            if (device.state == DeviceState.ON && device.maxDurationMinutes > 0) {
+            val effectiveTimer = if (device.deviceKind == com.example.smarthome.data.model.ScheduledKind.IRON && device.maxDurationMinutes == 0) 10 else device.maxDurationMinutes
+
+            if (device.state == DeviceState.ON && effectiveTimer > 0) {
                 val job = timerScope.launch {
-                    delay(device.maxDurationMinutes * 60 * 1000L)
+                    delay(effectiveTimer * 60 * 1000L)
                     // Auto-off the device after delay
                     updateDevice(device.id) { it.copy(state = DeviceState.OFF) }
 
                     // Send notification if it's an Iron
-                    if (device.type == com.example.smarthome.data.model.DeviceType.SCHEDULED_DEVICE &&
-                        device.deviceKind == com.example.smarthome.data.model.ScheduledKind.IRON) {
+                    if (device.deviceKind == com.example.smarthome.data.model.ScheduledKind.IRON) {
                         NotificationHelper.sendSafetyNotification(SmartHomeApp.instance, device.name)
                         addNotification(
                             title = "Safety Cutoff",

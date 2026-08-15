@@ -21,11 +21,13 @@ data class AreaDetailUiState(
     val showAddDeviceDialog: Boolean = false,
     val showDeviceDetailsDialog: Boolean = false,
     val showEditDeviceDialog: Boolean = false,
+    val showMultiSwitchDialog: Boolean = false,
     val selectedDevice: Device? = null,
     val selectedCell: Pair<Int, Int>? = null,
     val newDeviceName: String = "",
     val newDeviceType: String = "Bulb",
-    val newDeviceTimer: Int = 0
+    val newDeviceTimer: Int = 0,
+    val newDeviceSwitchCount: Int = 1
 )
 
 class AreaDetailViewModel(
@@ -50,7 +52,14 @@ class AreaDetailViewModel(
     fun onCellClick(row: Int, col: Int) {
         val existingDevice = _uiState.value.area?.devices?.find { it.row == row && it.col == col }
         if (existingDevice == null) {
-            _uiState.update { it.copy(showAddDeviceDialog = true, selectedCell = row to col, newDeviceName = "") }
+            _uiState.update { it.copy(
+                showAddDeviceDialog = true, 
+                selectedCell = row to col, 
+                newDeviceName = "",
+                newDeviceType = "Bulb",
+                newDeviceTimer = 0,
+                newDeviceSwitchCount = 1
+            ) }
         }
     }
 
@@ -59,17 +68,24 @@ class AreaDetailViewModel(
     }
 
     fun onEditDeviceClick(device: Device) {
+        val timer = if (device.deviceKind == ScheduledKind.IRON && device.maxDurationMinutes == 0) 10 else device.maxDurationMinutes
         _uiState.update { it.copy(
             showEditDeviceDialog = true, 
             showDeviceDetailsDialog = false, 
             selectedDevice = device, 
             newDeviceName = device.name,
-            newDeviceTimer = device.maxDurationMinutes
+            newDeviceTimer = timer
         ) }
     }
 
     fun dismissDeviceDetailsDialog() {
-        _uiState.update { it.copy(showDeviceDetailsDialog = false, showEditDeviceDialog = false, selectedDevice = null, newDeviceTimer = 0) }
+        _uiState.update { it.copy(
+            showDeviceDetailsDialog = false, 
+            showEditDeviceDialog = false, 
+            showMultiSwitchDialog = false,
+            selectedDevice = null, 
+            newDeviceTimer = 0
+        ) }
     }
 
     fun deleteDevice() {
@@ -100,7 +116,17 @@ class AreaDetailViewModel(
     }
 
     fun onNewDeviceTypeChange(type: String) {
-        _uiState.update { it.copy(newDeviceType = type) }
+        _uiState.update { 
+            it.copy(
+                newDeviceType = type,
+                newDeviceTimer = if (type == "Iron") 10 else it.newDeviceTimer,
+                newDeviceSwitchCount = if (type == "Switch") 4 else 1
+            ) 
+        }
+    }
+
+    fun onNewDeviceSwitchCountChange(count: Int) {
+        _uiState.update { it.copy(newDeviceSwitchCount = count) }
     }
 
     fun toggleDevice(device: Device) {
@@ -109,16 +135,14 @@ class AreaDetailViewModel(
             DeviceType.SCHEDULED_DEVICE -> repository.toggleScheduledDevice(device.id)
             DeviceType.CAMERA -> repository.toggleCameraStream(device.id)
             DeviceType.MULTI_SWITCH -> {
-                // If there are switches, toggle the first one for quick access
-                device.switches.firstOrNull()?.let { 
-                    repository.toggleSwitch(device.id, it.id)
-                } ?: run {
-                    // Fallback toggle state if no switches defined yet
-                    val newState = if (device.state == DeviceState.ON) DeviceState.OFF else DeviceState.ON
-                    repository.toggleOutlet(device.id) // Using toggleOutlet as a generic state toggle
-                }
+                _uiState.update { it.copy(showMultiSwitchDialog = true, selectedDevice = device) }
             }
         }
+    }
+
+    fun toggleIndividualSwitch(switchId: String) {
+        val deviceId = _uiState.value.selectedDevice?.id ?: return
+        repository.toggleSwitch(deviceId, switchId)
     }
 
     fun addDevice() {
@@ -182,7 +206,9 @@ class AreaDetailViewModel(
                     row = cell.first, 
                     col = cell.second, 
                     type = DeviceType.MULTI_SWITCH, 
-                    switches = listOf(com.example.smarthome.data.model.SwitchState("s1", "Main", false)),
+                    switches = (1..state.newDeviceSwitchCount).map { i ->
+                        com.example.smarthome.data.model.SwitchState("s$i", "Switch $i", false)
+                    },
                     state = DeviceState.OFF,
                     maxDurationMinutes = state.newDeviceTimer
                 )
