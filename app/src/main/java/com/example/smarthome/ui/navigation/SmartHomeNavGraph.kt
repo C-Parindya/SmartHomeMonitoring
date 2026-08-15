@@ -84,6 +84,9 @@ fun SmartHomeNavGraph(
                 },
                 onNavigateToUsageReport = {
                     navController.navigate(Screen.UsageReport.route)
+                },
+                onNavigateToCamera = { deviceId ->
+                    navController.navigate(Screen.CameraView.createRoute(deviceId))
                 }
             )
         }

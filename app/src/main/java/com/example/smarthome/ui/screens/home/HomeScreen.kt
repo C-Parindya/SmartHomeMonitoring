@@ -3,6 +3,7 @@ package com.example.smarthome.ui.screens.home
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -26,7 +27,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.smarthome.data.model.Device
 import com.example.smarthome.data.model.DeviceState
+import com.example.smarthome.data.model.DeviceType
 import com.example.smarthome.ui.theme.DarkBrown
 import com.example.smarthome.viewmodel.FloorListViewModel
 import java.text.SimpleDateFormat
@@ -36,6 +39,7 @@ import java.util.Locale
 @Composable
 fun HomeScreen(
     onViewAllActivity: () -> Unit,
+    onNavigateToCamera: (String) -> Unit,
     viewModel: FloorListViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -43,6 +47,13 @@ fun HomeScreen(
     Scaffold(
         containerColor = Color(0xFFF9F9F9)
     ) { padding ->
+        val allDevices = uiState.allDevices
+        val totalDevices = allDevices.size
+        val totalFloors = uiState.floors.size
+        val devicesOn = allDevices.count { it.state == DeviceState.ON }
+        val devicesError = allDevices.count { it.state == DeviceState.ERROR }
+        val cameras = allDevices.filter { it.type == DeviceType.CAMERA }
+
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
@@ -53,13 +64,6 @@ fun HomeScreen(
             }
 
             item {
-                val totalDevices = uiState.floors.sumOf { it.deviceCount }
-                val totalFloors = uiState.floors.size
-                
-                val allDevices = uiState.floors.flatMap { it.devices + it.areas.flatMap { area -> area.devices } }
-                val devicesOn = allDevices.count { it.state == DeviceState.ON }
-                val devicesError = allDevices.count { it.state == DeviceState.ERROR }
-
                 OverviewCard(
                     totalDevices = totalDevices,
                     totalFloors = totalFloors,
@@ -67,6 +71,21 @@ fun HomeScreen(
                     devicesError = devicesError,
                     modifier = Modifier.padding(horizontal = 24.dp).offset(y = (-40).dp)
                 )
+            }
+
+            // Camera Section
+            if (cameras.isNotEmpty()) {
+                item {
+                    SectionHeader(title = "Live Cameras", onViewAll = {})
+                }
+                item {
+                    CameraSection(
+                        cameras = cameras,
+                        onCameraClick = onNavigateToCamera,
+                        onTogglePower = viewModel::toggleDevice,
+                        modifier = Modifier.padding(horizontal = 24.dp)
+                    )
+                }
             }
 
             item {
@@ -202,6 +221,100 @@ private fun OverviewItem(icon: ImageVector, count: Int, label: String, iconColor
         Spacer(modifier = Modifier.height(8.dp))
         Text(text = count.toString(), fontWeight = FontWeight.Bold, fontSize = 18.sp, color = DarkBrown)
         Text(text = label, fontSize = 12.sp, color = Color.Gray)
+    }
+}
+
+@Composable
+private fun CameraSection(
+    cameras: List<Device>,
+    onCameraClick: (String) -> Unit,
+    onTogglePower: (Device) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        cameras.forEach { camera ->
+            CameraItem(
+                camera = camera, 
+                onCameraClick = onCameraClick,
+                onTogglePower = onTogglePower
+            )
+        }
+    }
+}
+
+@Composable
+private fun CameraItem(
+    camera: Device,
+    onCameraClick: (String) -> Unit,
+    onTogglePower: (Device) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .background(
+                            if (camera.state == DeviceState.ON) Color(0xFFE3F2FD) else Color(0xFFF5F5F5), 
+                            CircleShape
+                        )
+                        .clickable { onTogglePower(camera) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Videocam,
+                        contentDescription = null,
+                        tint = if (camera.state == DeviceState.ON) Color(0xFF2196F3) else Color.Gray
+                    )
+                }
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = camera.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = DarkBrown
+                    )
+                    val statusText = when {
+                        camera.state != DeviceState.ON -> "Power Off"
+                        camera.isStreaming -> "Streaming"
+                        else -> null
+                    }
+                    if (statusText != null) {
+                        Text(
+                            text = statusText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (camera.isStreaming) Color(0xFF4CAF50) else Color.Gray
+                        )
+                    }
+                }
+            }
+            
+            IconButton(onClick = { onCameraClick(camera.id) }) {
+                Icon(
+                    imageVector = Icons.Default.Visibility,
+                    contentDescription = "View Stream",
+                    tint = Color.Gray
+                )
+            }
+        }
     }
 }
 

@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -62,6 +63,7 @@ fun CameraViewScreen(
             else -> CameraViewContent(
                 device = device,
                 onToggleStream = viewModel::toggleCameraStream,
+                onTogglePower = viewModel::toggleCameraPower,
                 modifier = Modifier.padding(padding)
             )
         }
@@ -72,6 +74,7 @@ fun CameraViewScreen(
 private fun CameraViewContent(
     device: Device,
     onToggleStream: () -> Unit,
+    onTogglePower: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -142,12 +145,27 @@ private fun CameraViewContent(
             }
         }
 
-        Button(
-            onClick = onToggleStream,
-            enabled = device.state != DeviceState.DISCONNECTED,
-            modifier = Modifier.fillMaxWidth()
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(if (device.isStreaming) "Stop Stream" else "Start Stream")
+            Button(
+                onClick = onTogglePower,
+                modifier = Modifier.weight(1f),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = if (device.state == DeviceState.ON) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                )
+            ) {
+                Text(if (device.state == DeviceState.ON) "Power OFF" else "Power ON")
+            }
+
+            Button(
+                onClick = onToggleStream,
+                enabled = device.state == DeviceState.ON,
+                modifier = Modifier.weight(1f)
+            ) {
+                Text(if (device.isStreaming) "Stop Stream" else "Start Stream")
+            }
         }
     }
 }
