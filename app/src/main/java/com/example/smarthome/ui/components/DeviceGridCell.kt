@@ -32,6 +32,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.smarthome.data.model.Device
@@ -95,6 +96,17 @@ fun DeviceGridCell(
                         tint = if (device.state == DeviceState.OFF) Color.Gray else stateColor,
                         modifier = Modifier.size(28.dp)
                     )
+                    
+                    if (device.type == DeviceType.MULTI_SWITCH) {
+                        val onCount = device.switches.count { it.isOn }
+                        Text(
+                            text = "$onCount/${device.switches.size}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (onCount > 0) stateColor else Color.Gray,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
                     Text(
                         text = device.name,
                         style = MaterialTheme.typography.labelSmall,

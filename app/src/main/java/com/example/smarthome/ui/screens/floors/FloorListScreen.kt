@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.outlined.Layers
 import androidx.compose.material3.*
@@ -37,20 +38,11 @@ fun FloorListScreen(
     viewModel: FloorListViewModel
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val floorToDeleteState = remember { mutableStateOf<Floor?>(null) }
+    val floorToDelete = floorToDeleteState.value
 
     Scaffold(
-        containerColor = Color.White,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = { viewModel.showAddDialog() },
-                containerColor = DarkBrown,
-                contentColor = Color.White,
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier.padding(bottom = 16.dp, end = 8.dp).size(64.dp)
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Add Floor", modifier = Modifier.size(32.dp))
-            }
-        }
+        containerColor = Color.White
     ) { padding ->
         LazyColumn(
             modifier = Modifier
@@ -65,32 +57,50 @@ fun FloorListScreen(
             }
 
             item {
-                SectionTitle(text = "Select a floor to view details")
-            }
+                Column(modifier = Modifier.offset(y = (-40).dp)) {
+                    SectionTitle(text = "Select a floor to view details")
 
-            if (uiState.floors.isEmpty()) {
-                item {
-                    Box(modifier = Modifier.padding(24.dp)) {
-                        EmptyState(
-                            title = "No floors yet",
-                            message = "Tap the + button to add your first floor",
-                            icon = Icons.Outlined.Layers
-                        )
+                    if (uiState.floors.isEmpty()) {
+                        Box(modifier = Modifier.padding(24.dp)) {
+                            EmptyState(
+                                title = "No floors yet",
+                                message = "Tap the + button to add your first floor",
+                                icon = Icons.Outlined.Layers
+                            )
+                        }
+                    } else {
+                        uiState.floors.forEach { floor ->
+                            FloorCard(
+                                floor = floor,
+                                onClick = { onFloorClick(floor.id) },
+                                onEdit = { viewModel.showEditDialog(floor) },
+                                modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
+                            )
+                        }
                     }
                 }
-            } else {
-                items(uiState.floors, key = { it.id }) { floor ->
-                    FloorCard(
-                        floor = floor,
-                        onClick = { onFloorClick(floor.id) },
-                        onEdit = { viewModel.showEditDialog(floor) },
-                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp)
-                    )
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = { viewModel.showAddDialog() },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .height(56.dp)
+                        .offset(y = (-40).dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkBrown)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Add New Floor", fontWeight = FontWeight.Bold)
                 }
             }
             
             item {
-                Spacer(modifier = Modifier.height(100.dp))
+                Spacer(modifier = Modifier.height(60.dp))
             }
         }
     }
@@ -104,14 +114,42 @@ fun FloorListScreen(
         )
     }
 
-    if (uiState.showEditDialog) {
+    if (uiState.showEditDialog && uiState.selectedFloor != null) {
         AddFloorDialog(
             title = "Edit Floor",
             confirmLabel = "Update",
             name = uiState.newFloorName,
             onNameChange = { viewModel.onNewFloorNameChange(it) },
             onDismiss = { viewModel.dismissAddDialog() },
-            onConfirm = { viewModel.updateFloor() }
+            onConfirm = { viewModel.updateFloor() },
+            onDelete = {
+                floorToDeleteState.value = uiState.selectedFloor
+                viewModel.dismissAddDialog()
+            }
+        )
+    }
+
+    floorToDelete?.let { floor ->
+        AlertDialog(
+            onDismissRequest = { floorToDeleteState.value = null },
+            title = { Text("Delete Floor") },
+            text = { Text("Are you sure you want to delete '${floor.name}'? This will also remove all areas and devices on this floor.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        viewModel.deleteFloor(floor.id)
+                        floorToDeleteState.value = null
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { floorToDeleteState.value = null }) {
+                    Text("Cancel")
+                }
+            }
         )
     }
 }
@@ -203,7 +241,8 @@ fun AddFloorDialog(
     name: String,
     onNameChange: (String) -> Unit,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    onDelete: (() -> Unit)? = null
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -219,18 +258,38 @@ fun AddFloorDialog(
             )
         },
         confirmButton = {
-            Button(
-                onClick = onConfirm,
-                enabled = name.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = DarkBrown)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(confirmLabel)
+                if (onDelete != null) {
+                    TextButton(
+                        onClick = onDelete,
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Icon(Icons.Default.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Delete")
+                    }
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+                
+                TextButton(onClick = onDismiss) {
+                    Text("Cancel")
+                }
+                
+                Spacer(modifier = Modifier.width(8.dp))
+                
+                Button(
+                    onClick = onConfirm,
+                    enabled = name.isNotBlank(),
+                    colors = ButtonDefaults.buttonColors(containerColor = DarkBrown)
+                ) {
+                    Text(confirmLabel)
+                }
             }
         },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text("Cancel")
-            }
-        }
+        dismissButton = null
     )
 }
