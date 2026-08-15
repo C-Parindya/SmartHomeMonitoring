@@ -331,7 +331,7 @@ private fun AddDeviceDialog(
                 )
                 
                 Text("Type:", style = MaterialTheme.typography.labelMedium)
-                val types = listOf("Bulb", "Iron", "Camera", "Switch", "Fan")
+                val types = listOf("Bulb", "Iron", "Camera", "Multi Switch", "Fan", "Other")
                 
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -350,7 +350,7 @@ private fun AddDeviceDialog(
                     }
                 }
 
-                if (type == "Switch") {
+                if (type == "Multi Switch") {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Number of Switches (1-5):", style = MaterialTheme.typography.labelMedium)
                     Row(
