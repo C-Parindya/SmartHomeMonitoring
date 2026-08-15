@@ -39,4 +39,12 @@ class ProfileViewModel(
             onResult(result)
         }
     }
+
+    fun sendPasswordReset(onResult: (Result<Unit>) -> Unit) {
+        val email = uiState.value.user?.email ?: return
+        viewModelScope.launch {
+            val result = repository.sendPasswordResetEmail(email)
+            onResult(result)
+        }
+    }
 }

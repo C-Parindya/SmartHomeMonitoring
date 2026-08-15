@@ -17,6 +17,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -29,6 +30,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -85,6 +87,7 @@ private fun OutletControlContent(
     onBack: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var maxDuration by rememberSaveable(device.id) { mutableStateOf(device.maxDurationMinutes.toFloat()) }
     var onTime by rememberSaveable(device.id) { mutableStateOf(device.onTime ?: "") }
     var offTime by rememberSaveable(device.id) { mutableStateOf(device.offTime ?: "") }
 
@@ -143,6 +146,27 @@ private fun OutletControlContent(
                     checked = device.state == DeviceState.ON,
                     onCheckedChange = { if (device.state.isControllable) onToggle() },
                     enabled = device.state.isControllable
+                )
+            }
+        }
+
+        Card(modifier = Modifier.fillMaxWidth()) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Text(
+                    text = "Max Duration: ${maxDuration.toInt()} min",
+                    style = MaterialTheme.typography.titleSmall
+                )
+                Slider(
+                    value = maxDuration,
+                    onValueChange = { maxDuration = it },
+                    valueRange = 0f..240f,
+                    steps = 47,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+                Text(
+                    text = "Automatically turns off after the set duration when turned on.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color.Gray
                 )
             }
         }
@@ -215,7 +239,7 @@ private fun OutletControlContent(
                     Button(
                         onClick = {
                             onSaveSchedule(
-                                device.maxDurationMinutes,
+                                maxDuration.toInt(),
                                 onTime.ifBlank { null },
                                 offTime.ifBlank { null }
                             )
@@ -223,17 +247,17 @@ private fun OutletControlContent(
                         },
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text("Save Schedule")
+                        Text("Save Settings")
                     }
                     
                     TextButton(
                         onClick = {
                             onTime = ""
                             offTime = ""
-                            onSaveSchedule(device.maxDurationMinutes, null, null)
+                            onSaveSchedule(maxDuration.toInt(), null, null)
                         }
                     ) {
-                        Text("Clear")
+                        Text("Clear Schedule")
                     }
                 }
             }

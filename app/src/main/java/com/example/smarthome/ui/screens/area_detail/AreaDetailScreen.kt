@@ -18,6 +18,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.smarthome.data.model.Device
+import com.example.smarthome.data.model.DeviceType
 import com.example.smarthome.ui.components.DeviceGridCell
 import com.example.smarthome.ui.components.EmptyState
 import com.example.smarthome.ui.components.LoadingState
@@ -236,8 +237,9 @@ private fun DeviceDetailsDialog(
             }
         },
         confirmButton = {
+            val label = if (device.type == DeviceType.CAMERA) "View Stream" else "Schedule"
             TextButton(onClick = { onControl(device) }) {
-                Text("Schedule")
+                Text(label)
             }
         },
         dismissButton = {
@@ -329,7 +331,7 @@ private fun AddDeviceDialog(
                 )
                 
                 Text("Type:", style = MaterialTheme.typography.labelMedium)
-                val types = listOf("Bulb", "Iron", "Camera", "Switch", "Fan")
+                val types = listOf("Bulb", "Iron", "Camera", "Multi Switch", "Fan", "Other")
                 
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -348,7 +350,7 @@ private fun AddDeviceDialog(
                     }
                 }
 
-                if (type == "Switch") {
+                if (type == "Multi Switch") {
                     Spacer(modifier = Modifier.height(8.dp))
                     Text("Number of Switches (1-5):", style = MaterialTheme.typography.labelMedium)
                     Row(

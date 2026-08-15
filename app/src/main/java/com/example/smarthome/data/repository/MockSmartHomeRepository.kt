@@ -3,6 +3,8 @@ package com.example.smarthome.data.repository
 import com.example.smarthome.data.model.Area
 import com.example.smarthome.data.model.Device
 import com.example.smarthome.data.model.DeviceState
+import com.example.smarthome.data.model.DeviceType
+import com.example.smarthome.data.model.ScheduledKind
 import com.example.smarthome.data.model.Floor
 import com.example.smarthome.data.model.Notification
 import com.example.smarthome.data.model.UsageStat
@@ -124,18 +126,18 @@ class MockSmartHomeRepository {
         
         if (updated) {
             updateDevice(device.id) { currentDevice ->
-                if (currentDevice.type == com.example.smarthome.data.model.DeviceType.MULTI_SWITCH) {
+                if (currentDevice.type == DeviceType.MULTI_SWITCH) {
                     val updatedSwitches = currentDevice.switches.map { it.copy(isOn = newState == DeviceState.ON) }
                     currentDevice.copy(state = newState, switches = updatedSwitches)
                 } else {
                     currentDevice.copy(state = newState)
                 }
             }
-            addNotification(
-                title = "Scheduled Action",
-                message = "${device.name} has been turned ${if (newState == DeviceState.ON) "ON" else "OFF"} by schedule.",
-                type = "INFO"
-            )
+            val status = if (newState == DeviceState.ON) "ON" else "OFF"
+            val title = "Scheduled Action"
+            val message = "${device.name} turned $status by schedule."
+            addNotification(title = title, message = message, type = "INFO")
+            NotificationHelper.sendDeviceNotification(SmartHomeApp.instance, title, message)
         }
     }
 
@@ -410,9 +412,11 @@ class MockSmartHomeRepository {
                 if (switch.id == switchId) switch.copy(isOn = !switch.isOn) else switch
             }
             val anyOn = updatedSwitches.any { it.isOn }
+            val newState = if (anyOn) DeviceState.ON else DeviceState.OFF
+            
             device.copy(
                 switches = updatedSwitches,
-                state = if (anyOn) DeviceState.ON else DeviceState.OFF
+                state = newState
             )
         }
     }
@@ -442,8 +446,20 @@ class MockSmartHomeRepository {
 
     fun toggleCameraStream(deviceId: String) {
         updateDevice(deviceId) { device ->
-            if (device.state == DeviceState.DISCONNECTED) return@updateDevice device
+            if (device.state != DeviceState.ON) return@updateDevice device
             device.copy(isStreaming = !device.isStreaming)
+        }
+    }
+
+    fun toggleCameraPower(deviceId: String) {
+        updateDevice(deviceId) { device ->
+            if (device.state == DeviceState.DISCONNECTED || device.state == DeviceState.ERROR) return@updateDevice device
+            val newState = if (device.state == DeviceState.ON) DeviceState.OFF else DeviceState.ON
+            
+            device.copy(
+                state = newState,
+                isStreaming = if (newState == DeviceState.OFF) false else device.isStreaming
+            )
         }
     }
 
@@ -503,23 +519,33 @@ class MockSmartHomeRepository {
         // Handle auto-off timer logic
         deviceAfterTransform?.let { device ->
             activeTimers[device.id]?.cancel()
-            val effectiveTimer = if (device.deviceKind == com.example.smarthome.data.model.ScheduledKind.IRON && device.maxDurationMinutes == 0) 10 else device.maxDurationMinutes
+            
+            // Iron has a default 10-minute timer if not specified
+            val effectiveTimer = if (device.deviceKind == ScheduledKind.IRON && device.maxDurationMinutes == 0) 10 else device.maxDurationMinutes
 
             if (device.state == DeviceState.ON && effectiveTimer > 0) {
                 val job = timerScope.launch {
                     delay(effectiveTimer * 60 * 1000L)
-                    // Auto-off the device after delay
-                    updateDevice(device.id) { it.copy(state = DeviceState.OFF) }
+                    
+                    val title = if (device.deviceKind == ScheduledKind.IRON) "Safety Cutoff" else "Timer Auto-Off"
+                    val message = if (device.deviceKind == ScheduledKind.IRON) 
+                        "${device.name} automatically turned off for safety." 
+                        else "${device.name} automatically turned off."
+                    
+                    // Send notifications BEFORE updating device (which cancels this job)
+                    addNotification(
+                        title = title,
+                        message = message,
+                        type = if (device.deviceKind == ScheduledKind.IRON) "SAFETY" else "INFO"
+                    )
+                    NotificationHelper.sendDeviceNotification(SmartHomeApp.instance, title, message)
 
-                    // Send notification if it's an Iron
-                    if (device.deviceKind == com.example.smarthome.data.model.ScheduledKind.IRON) {
+                    if (device.deviceKind == ScheduledKind.IRON) {
                         NotificationHelper.sendSafetyNotification(SmartHomeApp.instance, device.name)
-                        addNotification(
-                            title = "Safety Cutoff",
-                            message = "${device.name} has been automatically turned off for safety.",
-                            type = "SAFETY"
-                        )
                     }
+
+                    // Auto-off the device
+                    updateDevice(device.id) { it.copy(state = DeviceState.OFF) }
                 }
                 activeTimers[device.id] = job
             }

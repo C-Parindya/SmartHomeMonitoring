@@ -120,7 +120,7 @@ class AreaDetailViewModel(
             it.copy(
                 newDeviceType = type,
                 newDeviceTimer = if (type == "Iron") 10 else it.newDeviceTimer,
-                newDeviceSwitchCount = if (type == "Switch") 4 else 1
+                newDeviceSwitchCount = if (type == "Multi Switch") 4 else 1
             ) 
         }
     }
@@ -133,7 +133,7 @@ class AreaDetailViewModel(
         when (device.type) {
             DeviceType.OUTLET -> repository.toggleOutlet(device.id)
             DeviceType.SCHEDULED_DEVICE -> repository.toggleScheduledDevice(device.id)
-            DeviceType.CAMERA -> repository.toggleCameraStream(device.id)
+            DeviceType.CAMERA -> repository.toggleCameraPower(device.id)
             DeviceType.MULTI_SWITCH -> {
                 _uiState.update { it.copy(showMultiSwitchDialog = true, selectedDevice = device) }
             }
@@ -198,7 +198,7 @@ class AreaDetailViewModel(
                     state = DeviceState.OFF,
                     maxDurationMinutes = state.newDeviceTimer
                 )
-                "Switch" -> Device(
+                "Multi Switch" -> Device(
                     id = deviceId, 
                     name = state.newDeviceName, 
                     floorId = floorId, 
