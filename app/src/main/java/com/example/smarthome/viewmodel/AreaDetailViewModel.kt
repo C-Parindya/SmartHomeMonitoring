@@ -133,7 +133,7 @@ class AreaDetailViewModel(
         when (device.type) {
             DeviceType.OUTLET -> repository.toggleOutlet(device.id)
             DeviceType.SCHEDULED_DEVICE -> repository.toggleScheduledDevice(device.id)
-            DeviceType.CAMERA -> repository.toggleCameraStream(device.id)
+            DeviceType.CAMERA -> repository.toggleCameraPower(device.id)
             DeviceType.MULTI_SWITCH -> {
                 _uiState.update { it.copy(showMultiSwitchDialog = true, selectedDevice = device) }
             }

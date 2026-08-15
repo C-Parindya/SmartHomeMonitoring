@@ -46,6 +46,8 @@ class DeviceControlViewModel(
 
     fun toggleCameraStream() = repository.toggleCameraStream(deviceId)
 
+    fun toggleCameraPower() = repository.toggleCameraPower(deviceId)
+
     companion object {
         fun factory(
             deviceId: String,

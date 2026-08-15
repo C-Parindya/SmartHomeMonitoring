@@ -18,6 +18,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.smarthome.data.model.Device
+import com.example.smarthome.data.model.DeviceType
 import com.example.smarthome.ui.components.DeviceGridCell
 import com.example.smarthome.ui.components.EmptyState
 import com.example.smarthome.ui.components.LoadingState
@@ -236,8 +237,9 @@ private fun DeviceDetailsDialog(
             }
         },
         confirmButton = {
+            val label = if (device.type == DeviceType.CAMERA) "View Stream" else "Schedule"
             TextButton(onClick = { onControl(device) }) {
-                Text("Schedule")
+                Text(label)
             }
         },
         dismissButton = {

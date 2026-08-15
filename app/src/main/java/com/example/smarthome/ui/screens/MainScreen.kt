@@ -50,7 +50,8 @@ fun MainScreen(
     repository: MockSmartHomeRepository,
     onLogout: () -> Unit,
     onNavigateToFloorDetail: (String) -> Unit,
-    onNavigateToUsageReport: () -> Unit
+    onNavigateToUsageReport: () -> Unit,
+    onNavigateToCamera: (String) -> Unit
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -126,6 +127,7 @@ fun MainScreen(
                             restoreState = true
                         }
                     },
+                    onNavigateToCamera = onNavigateToCamera,
                     viewModel = viewModel(factory = viewModelFactory)
                 )
             }

@@ -442,8 +442,19 @@ class MockSmartHomeRepository {
 
     fun toggleCameraStream(deviceId: String) {
         updateDevice(deviceId) { device ->
-            if (device.state == DeviceState.DISCONNECTED) return@updateDevice device
+            if (device.state != DeviceState.ON) return@updateDevice device
             device.copy(isStreaming = !device.isStreaming)
+        }
+    }
+
+    fun toggleCameraPower(deviceId: String) {
+        updateDevice(deviceId) { device ->
+            if (device.state == DeviceState.DISCONNECTED || device.state == DeviceState.ERROR) return@updateDevice device
+            val newState = if (device.state == DeviceState.ON) DeviceState.OFF else DeviceState.ON
+            device.copy(
+                state = newState,
+                isStreaming = if (newState == DeviceState.OFF) false else device.isStreaming
+            )
         }
     }
 

@@ -22,7 +22,7 @@ data class FloorListUiState(
     val selectedFloor: Floor? = null,
     val newFloorName: String = ""
 ) {
-    val allDevices: List<Device> get() = floors.flatMap { it.areas }.flatMap { it.devices }
+    val allDevices: List<Device> get() = floors.flatMap { it.devices + it.areas.flatMap { it.devices } }
 }
 
 class FloorListViewModel(
@@ -91,7 +91,7 @@ class FloorListViewModel(
         when (device.type) {
             DeviceType.OUTLET -> repository.toggleOutlet(device.id)
             DeviceType.SCHEDULED_DEVICE -> repository.toggleScheduledDevice(device.id)
-            DeviceType.CAMERA -> repository.toggleCameraStream(device.id)
+            DeviceType.CAMERA -> repository.toggleCameraPower(device.id)
             DeviceType.MULTI_SWITCH -> {
                 // For simplicity on home screen, toggle all switches or just the first one?
                 // Usually multi-switch might need specific control, but let's toggle first switch for quick action
