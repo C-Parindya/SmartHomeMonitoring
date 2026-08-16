@@ -75,6 +75,33 @@ class MockSmartHomeRepository {
         initialValue = emptyList()
     )
 
+    private val _usageStats = MutableStateFlow(emptyList<UsageStat>())
+    val usageStats: StateFlow<List<UsageStat>> = floors.flatMapLatest { floorList ->
+        flowOf(floorList.flatMap { floor ->
+            val directDevices = floor.devices.map { it to floor.name }
+            val areaDevices = floor.areas.flatMap { area -> area.devices.map { it to floor.name } }
+            (directDevices + areaDevices).map { (device, fName) ->
+                UsageStat(
+                    deviceId = device.id,
+                    deviceName = device.name,
+                    deviceType = when(device.type) {
+                        DeviceType.MULTI_SWITCH -> "Multi-Switch Unit"
+                        DeviceType.CAMERA -> "Security Camera"
+                        DeviceType.SCHEDULED_DEVICE -> device.deviceKind.name.lowercase().replaceFirstChar { it.uppercase() }
+                        else -> "Power Outlet"
+                    },
+                    floorName = fName,
+                    totalOnMinutes = if (device.state == DeviceState.ON) 45 else 0, // Simple heuristic for "real" data
+                    lastUsedEpochMillis = if (device.state == DeviceState.ON) System.currentTimeMillis() else null
+                )
+            }
+        }.sortedByDescending { it.totalOnMinutes })
+    }.stateIn(
+        scope = kotlinx.coroutines.GlobalScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
     init {
         // Start background scheduler
         timerScope.launch {
@@ -171,9 +198,6 @@ class MockSmartHomeRepository {
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
-
-    private val _usageStats = MutableStateFlow(emptyList<UsageStat>())
-    val usageStats: StateFlow<List<UsageStat>> = _usageStats.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
