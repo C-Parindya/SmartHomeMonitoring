@@ -93,12 +93,13 @@ class FloorListViewModel(
             DeviceType.SCHEDULED_DEVICE -> repository.toggleScheduledDevice(device.id)
             DeviceType.CAMERA -> repository.toggleCameraPower(device.id)
             DeviceType.MULTI_SWITCH -> {
-                // For simplicity on home screen, toggle all switches or just the first one?
-                // Usually multi-switch might need specific control, but let's toggle first switch for quick action
-                device.switches.firstOrNull()?.let { 
-                    repository.toggleSwitch(device.id, it.id)
-                }
+                val anyOn = device.switches.any { it.isOn }
+                repository.toggleAllSwitches(device.id, !anyOn)
             }
         }
+    }
+
+    fun toggleIndividualSwitch(deviceId: String, switchId: String) {
+        repository.toggleSwitch(deviceId, switchId)
     }
 }

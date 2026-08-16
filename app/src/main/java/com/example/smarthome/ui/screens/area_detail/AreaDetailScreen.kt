@@ -153,8 +153,9 @@ fun AreaDetailScreen(
     }
 
     if (uiState.showMultiSwitchDialog && uiState.selectedDevice != null) {
+        val currentDevice = uiState.area?.devices?.find { it.id == uiState.selectedDevice!!.id } ?: uiState.selectedDevice!!
         MultiSwitchDialog(
-            device = uiState.selectedDevice!!,
+            device = currentDevice,
             onToggleSwitch = viewModel::toggleIndividualSwitch,
             onDismiss = viewModel::dismissDeviceDetailsDialog
         )
