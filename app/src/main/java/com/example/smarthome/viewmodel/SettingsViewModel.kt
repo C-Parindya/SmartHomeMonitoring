@@ -2,6 +2,7 @@ package com.example.smarthome.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.smarthome.data.model.UsageStat
 import com.example.smarthome.data.model.UserProfile
 import com.example.smarthome.data.repository.MockSmartHomeRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -11,7 +12,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class ProfileUiState(
-    val user: UserProfile? = null
+    val user: UserProfile? = null,
+    val usageStats: List<UsageStat> = emptyList()
 )
 
 class ProfileViewModel(
@@ -25,6 +27,11 @@ class ProfileViewModel(
         viewModelScope.launch {
             repository.currentUser.collect { user ->
                 _uiState.update { it.copy(user = user) }
+            }
+        }
+        viewModelScope.launch {
+            repository.usageStats.collect { stats ->
+                _uiState.update { it.copy(usageStats = stats) }
             }
         }
     }

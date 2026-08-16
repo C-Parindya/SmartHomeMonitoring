@@ -230,6 +230,7 @@ fun MainScreen(
                 ProfileScreen(
                     onLogout = onLogout,
                     onEditProfile = { navController.navigate(Screen.EditProfile.route) },
+                    onUsageReport = onNavigateToUsageReport,
                     viewModel = viewModel(factory = viewModelFactory)
                 )
             }

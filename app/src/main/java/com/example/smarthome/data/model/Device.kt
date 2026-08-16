@@ -1,6 +1,7 @@
 package com.example.smarthome.data.model
 
 import com.google.firebase.database.IgnoreExtraProperties
+import com.google.firebase.database.PropertyName
 
 enum class DeviceType {
     OUTLET,
@@ -31,6 +32,8 @@ data class Device(
     
     // Camera fields
     val snapshotUrl: String? = null,
+    @get:PropertyName("streaming")
+    @PropertyName("streaming")
     val isStreaming: Boolean = false
 )
 
@@ -38,6 +41,8 @@ data class Device(
 data class SwitchState(
     val id: String = "",
     val name: String = "",
+    @get:PropertyName("on")
+    @PropertyName("on")
     val isOn: Boolean = false
 )
 
