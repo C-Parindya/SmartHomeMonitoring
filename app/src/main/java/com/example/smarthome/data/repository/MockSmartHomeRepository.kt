@@ -19,6 +19,8 @@ import com.google.firebase.auth.UserProfileChangeRequest
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.MutableData
+import com.google.firebase.database.Transaction
 import com.google.firebase.database.ValueEventListener
 import com.google.firebase.database.getValue
 import kotlinx.coroutines.Job
@@ -67,6 +69,33 @@ class MockSmartHomeRepository {
             floorsRef.addValueEventListener(listener)
             awaitClose { floorsRef.removeEventListener(listener) }
         }
+    }.stateIn(
+        scope = kotlinx.coroutines.GlobalScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    private val _usageStats = MutableStateFlow(emptyList<UsageStat>())
+    val usageStats: StateFlow<List<UsageStat>> = floors.flatMapLatest { floorList ->
+        flowOf(floorList.flatMap { floor ->
+            val directDevices = floor.devices.map { it to floor.name }
+            val areaDevices = floor.areas.flatMap { area -> area.devices.map { it to floor.name } }
+            (directDevices + areaDevices).map { (device, fName) ->
+                UsageStat(
+                    deviceId = device.id,
+                    deviceName = device.name,
+                    deviceType = when(device.type) {
+                        DeviceType.MULTI_SWITCH -> "Multi-Switch Unit"
+                        DeviceType.CAMERA -> "Security Camera"
+                        DeviceType.SCHEDULED_DEVICE -> device.deviceKind.name.lowercase().replaceFirstChar { it.uppercase() }
+                        else -> "Power Outlet"
+                    },
+                    floorName = fName,
+                    totalOnMinutes = if (device.state == DeviceState.ON) 45 else 0, // Simple heuristic for "real" data
+                    lastUsedEpochMillis = if (device.state == DeviceState.ON) System.currentTimeMillis() else null
+                )
+            }
+        }.sortedByDescending { it.totalOnMinutes })
     }.stateIn(
         scope = kotlinx.coroutines.GlobalScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -169,9 +198,6 @@ class MockSmartHomeRepository {
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = emptyList()
     )
-
-    private val _usageStats = MutableStateFlow(emptyList<UsageStat>())
-    val usageStats: StateFlow<List<UsageStat>> = _usageStats.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -421,6 +447,17 @@ class MockSmartHomeRepository {
         }
     }
 
+    fun toggleAllSwitches(deviceId: String, turnOn: Boolean) {
+        updateDevice(deviceId) { device ->
+            if (!device.state.isControllable) return@updateDevice device
+            val updatedSwitches = device.switches.map { it.copy(isOn = turnOn) }
+            device.copy(
+                switches = updatedSwitches,
+                state = if (turnOn) DeviceState.ON else DeviceState.OFF
+            )
+        }
+    }
+
     fun toggleScheduledDevice(deviceId: String) {
         updateDevice(deviceId) { device ->
             if (!device.state.isControllable) return@updateDevice device
@@ -470,86 +507,75 @@ class MockSmartHomeRepository {
         val userId = auth.currentUser?.uid ?: return
         val currentFloors = floors.value
         
-        var floorToUpdate: Floor? = null
-        var deviceAfterTransform: Device? = null
+        val floor = currentFloors.find { floor ->
+            floor.devices.any { it.id == deviceId } || 
+            floor.areas.any { area -> area.devices.any { it.id == deviceId } }
+        } ?: return
 
-        currentFloors.forEach { floor ->
-            var floorUpdated = false
-
-            // Check direct devices
-            val updatedFloorDevices = floor.devices.map { device ->
-                if (device.id == deviceId) {
-                    val newDevice = transform(device)
-                    deviceAfterTransform = newDevice
-                    floorUpdated = true
-                    newDevice
-                } else {
-                    device
-                }
-            }
-
-            // Check area devices
-            val updatedAreas = floor.areas.map { area ->
-                val updatedAreaDevices = area.devices.map { device ->
+        val floorRef = database.getReference("users/$userId/floors/${floor.id}")
+        
+        floorRef.runTransaction(object : Transaction.Handler {
+            override fun doTransaction(mutableData: MutableData): Transaction.Result {
+                val f = mutableData.getValue(Floor::class.java) ?: return Transaction.success(mutableData)
+                
+                var updated = false
+                val newDevices = f.devices.map { device ->
                     if (device.id == deviceId) {
-                        val newDevice = transform(device)
-                        deviceAfterTransform = newDevice
-                        floorUpdated = true
-                        newDevice
-                    } else {
-                        device
+                        updated = true
+                        transform(device)
+                    } else device
+                }
+
+                val newAreas = f.areas.map { area ->
+                    val updatedAreaDevices = area.devices.map { device ->
+                        if (device.id == deviceId) {
+                            updated = true
+                            transform(device)
+                        } else device
+                    }
+                    if (updatedAreaDevices != area.devices) {
+                        area.copy(devices = updatedAreaDevices)
+                    } else area
+                }
+
+                if (updated) {
+                    mutableData.setValue(f.copy(devices = newDevices, areas = newAreas))
+                }
+                return Transaction.success(mutableData)
+            }
+
+            override fun onComplete(error: DatabaseError?, committed: Boolean, snapshot: DataSnapshot?) {
+                if (error != null) {
+                    android.util.Log.e("MockSmartHomeRepository", "Transaction failed", error.toException())
+                }
+                
+                if (committed && snapshot != null) {
+                    val updatedFloor = snapshot.getValue(Floor::class.java)
+                    val device = updatedFloor?.let { f ->
+                        f.devices.find { it.id == deviceId } ?: f.areas.flatMap { it.devices }.find { it.id == deviceId }
+                    }
+                    
+                    device?.let { d ->
+                        activeTimers[d.id]?.cancel()
+                        val effectiveTimer = if (d.deviceKind == ScheduledKind.IRON && d.maxDurationMinutes == 0) 10 else d.maxDurationMinutes
+                        if (d.state == DeviceState.ON && effectiveTimer > 0) {
+                            val job = timerScope.launch {
+                                delay(effectiveTimer * 60 * 1000L)
+                                val title = if (d.deviceKind == ScheduledKind.IRON) "Safety Cutoff" else "Timer Auto-Off"
+                                val message = if (d.deviceKind == ScheduledKind.IRON) 
+                                    "${d.name} automatically turned off for safety." 
+                                    else "${d.name} automatically turned off."
+                                addNotification(title = title, message = message, type = if (d.deviceKind == ScheduledKind.IRON) "SAFETY" else "INFO")
+                                NotificationHelper.sendDeviceNotification(SmartHomeApp.instance, title, message)
+                                if (d.deviceKind == ScheduledKind.IRON) NotificationHelper.sendSafetyNotification(SmartHomeApp.instance, d.name)
+                                updateDevice(d.id) { it.copy(state = DeviceState.OFF) }
+                            }
+                            activeTimers[d.id] = job
+                        }
                     }
                 }
-                if (updatedAreaDevices != area.devices) {
-                    area.copy(devices = updatedAreaDevices)
-                } else {
-                    area
-                }
             }
-
-            if (floorUpdated) {
-                floorToUpdate = floor.copy(devices = updatedFloorDevices, areas = updatedAreas)
-            }
-        }
-
-        floorToUpdate?.let {
-            database.getReference("users/$userId/floors/${it.id}").setValue(it)
-        }
-
-        // Handle auto-off timer logic
-        deviceAfterTransform?.let { device ->
-            activeTimers[device.id]?.cancel()
-            
-            // Iron has a default 10-minute timer if not specified
-            val effectiveTimer = if (device.deviceKind == ScheduledKind.IRON && device.maxDurationMinutes == 0) 10 else device.maxDurationMinutes
-
-            if (device.state == DeviceState.ON && effectiveTimer > 0) {
-                val job = timerScope.launch {
-                    delay(effectiveTimer * 60 * 1000L)
-                    
-                    val title = if (device.deviceKind == ScheduledKind.IRON) "Safety Cutoff" else "Timer Auto-Off"
-                    val message = if (device.deviceKind == ScheduledKind.IRON) 
-                        "${device.name} automatically turned off for safety." 
-                        else "${device.name} automatically turned off."
-                    
-                    // Send notifications BEFORE updating device (which cancels this job)
-                    addNotification(
-                        title = title,
-                        message = message,
-                        type = if (device.deviceKind == ScheduledKind.IRON) "SAFETY" else "INFO"
-                    )
-                    NotificationHelper.sendDeviceNotification(SmartHomeApp.instance, title, message)
-
-                    if (device.deviceKind == ScheduledKind.IRON) {
-                        NotificationHelper.sendSafetyNotification(SmartHomeApp.instance, device.name)
-                    }
-
-                    // Auto-off the device
-                    updateDevice(device.id) { it.copy(state = DeviceState.OFF) }
-                }
-                activeTimers[device.id] = job
-            }
-        }
+        })
     }
 
     companion object {

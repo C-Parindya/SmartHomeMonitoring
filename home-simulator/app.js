@@ -31,6 +31,7 @@ const loginBtn = document.getElementById("login-btn");
 const logoutBtn = document.getElementById("logout-btn");
 const userLabel = document.getElementById("user-label");
 const houseView = document.getElementById("house-view");
+const floorNav = document.getElementById("floor-nav");
 const summaryText = document.getElementById("summary-text");
 const lastUpdate = document.getElementById("last-update");
 const activityLog = document.getElementById("activity-log");
@@ -78,18 +79,20 @@ houseView.addEventListener("click", async (e) => {
   const device = previousDevices.get(deviceCard.dataset.deviceId);
   if (!device) return;
 
+  const switches = device.switches ? (Array.isArray(device.switches) ? device.switches : Object.values(device.switches)) : [];
+
   if (switchChip) {
     const switchIdx = switchChip.dataset.switchIdx;
-    if (device.switches && device.switches[switchIdx]) {
-      const newState = !device.switches[switchIdx].isOn;
-      database.ref(`users/${userId}/floors/${floorId}/areas/${areaIdx}/devices/${deviceIdx}/switches/${switchIdx}/isOn`).set(newState);
+    if (switches[switchIdx]) {
+      const newState = !switches[switchIdx].on;
+      database.ref(`users/${userId}/floors/${floorId}/areas/${areaIdx}/devices/${deviceIdx}/switches/${switchIdx}/on`).set(newState);
     }
     return;
   }
 
   // Toggle main device state
   if (device.type === "CAMERA") {
-    database.ref(`users/${userId}/floors/${floorId}/areas/${areaIdx}/devices/${deviceIdx}/isStreaming`).set(!device.isStreaming);
+    database.ref(`users/${userId}/floors/${floorId}/areas/${areaIdx}/devices/${deviceIdx}/streaming`).set(!device.streaming);
   } else if (device.type === "MULTI_SWITCH") {
     // Multi-switch main card click could toggle all, but typically we want chip clicks
   } else {
@@ -166,6 +169,7 @@ function parseFloors(snapshot) {
 
 function renderHouse(floors) {
   if (floors.length === 0) {
+    floorNav.innerHTML = "";
     houseView.innerHTML = `
       <div class="empty-house">
         <span class="empty-icon">🏡</span>
@@ -173,6 +177,16 @@ function renderHouse(floors) {
       </div>`;
     return;
   }
+
+  // Render Floor Navigation
+  floorNav.innerHTML = floors
+    .map(
+      (floor) =>
+        `<button class="floor-nav-btn" onclick="document.querySelector('[data-floor-id=\\'${floor.id}\\']').scrollIntoView({behavior: 'smooth'})">${escapeHtml(
+          floor.name
+        )}</button>`
+    )
+    .join("");
 
   houseView.innerHTML = floors
     .map((floor) => {
@@ -219,7 +233,7 @@ function renderDevice(device, deviceIdx, areaIdx, floorId) {
   const icon = getDeviceIcon(device);
   const kindClass = getKindClass(device);
   const isLightOn = device.type === "SCHEDULED_DEVICE" && device.deviceKind === "LIGHT" && state === "ON";
-  const isStreaming = device.type === "CAMERA" && device.isStreaming;
+  const isStreaming = device.type === "CAMERA" && device.streaming;
 
   let meta = getDeviceTypeLabel(device);
   if (device.type === "SCHEDULED_DEVICE" && device.maxDurationMinutes > 0) {
@@ -227,11 +241,13 @@ function renderDevice(device, deviceIdx, areaIdx, floorId) {
   }
 
   let switchesHtml = "";
-  if (device.type === "MULTI_SWITCH" && Array.isArray(device.switches)) {
-    switchesHtml = `<div class="switches-row">${device.switches
+  const switches = device.switches ? (Array.isArray(device.switches) ? device.switches : Object.values(device.switches)) : [];
+
+  if (device.type === "MULTI_SWITCH" && switches.length > 0) {
+    switchesHtml = `<div class="switches-row">${switches
       .map(
         (s, switchIdx) =>
-          `<span class="switch-chip ${s.isOn ? "on" : ""}" data-switch-idx="${switchIdx}">${escapeHtml(s.name || "Switch")}: ${s.isOn ? "ON" : "OFF"}</span>`
+          `<span class="switch-chip ${s && s.on ? "on" : ""}" data-switch-idx="${switchIdx}">${escapeHtml((s && s.name) || "Switch")}: ${(s && s.on) ? "ON" : "OFF"}</span>`
       )
       .join("")}</div>`;
   }
@@ -258,10 +274,11 @@ function renderDevice(device, deviceIdx, areaIdx, floorId) {
 
 function isDeviceActive(device) {
   if (device.state === "ON") return true;
-  if (device.type === "MULTI_SWITCH" && Array.isArray(device.switches)) {
-    return device.switches.some((s) => s.isOn);
+  const switches = device.switches ? (Array.isArray(device.switches) ? device.switches : Object.values(device.switches)) : [];
+  if (device.type === "MULTI_SWITCH" && switches.length > 0) {
+    return switches.some((s) => s && s.on);
   }
-  if (device.type === "CAMERA" && device.isStreaming) return true;
+  if (device.type === "CAMERA" && device.streaming) return true;
   return false;
 }
 
@@ -303,7 +320,7 @@ function getDeviceTypeLabel(device) {
     case "SCHEDULED_DEVICE":
       return (device.deviceKind || "LIGHT").toLowerCase();
     case "CAMERA":
-      return device.isStreaming ? "Camera · streaming" : "Camera";
+      return device.streaming ? "Camera · streaming" : "Camera";
     default:
       return "Device";
   }
@@ -346,11 +363,11 @@ function detectChange(device, deviceIdx, areaIdx, floorId) {
         logSwitchActivity(device);
         flashDevice(device.id);
       }
-    } else if (device.type === "CAMERA" && prev.isStreaming !== device.isStreaming) {
+    } else if (device.type === "CAMERA" && prev.streaming !== device.streaming) {
       logActivity(
         device,
-        device.isStreaming ? "OFF" : "ON",
-        device.isStreaming ? "ON" : "OFF",
+        device.streaming ? "OFF" : "ON",
+        device.streaming ? "ON" : "OFF",
         "stream"
       );
       flashDevice(device.id);
@@ -358,7 +375,9 @@ function detectChange(device, deviceIdx, areaIdx, floorId) {
   }
 
   manageAutoOff(device, floorId, areaIdx, deviceIdx);
-  previousDevices.set(key, { ...device, switches: device.switches ? [...device.switches] : [] });
+
+  const switchesToStore = device.switches ? (Array.isArray(device.switches) ? [...device.switches] : Object.values(device.switches)) : [];
+  previousDevices.set(key, { ...device, switches: switchesToStore });
 }
 
 function manageAutoOff(device, floorId, areaIdx, deviceIdx) {
@@ -442,8 +461,9 @@ function logTimerExpiry(device) {
 }
 
 function getEffectiveState(device) {
-  if (device.type === "MULTI_SWITCH" && Array.isArray(device.switches)) {
-    return device.switches.some((s) => s.isOn) ? "ON" : "OFF";
+  const switches = device.switches ? (Array.isArray(device.switches) ? device.switches : Object.values(device.switches)) : [];
+  if (device.type === "MULTI_SWITCH" && switches.length > 0) {
+    return switches.some((s) => s && s.on) ? "ON" : "OFF";
   }
   return device.state || "OFF";
 }
@@ -469,7 +489,8 @@ function logActivity(device, fromState, toState, kind = "power") {
 }
 
 function logSwitchActivity(device) {
-  const onSwitches = (device.switches || []).filter((s) => s.isOn).map((s) => s.name);
+  const switches = device.switches ? (Array.isArray(device.switches) ? device.switches : Object.values(device.switches)) : [];
+  const onSwitches = switches.filter((s) => s && s.on).map((s) => s.name);
   const item = document.createElement("li");
   item.className = "activity-item on-event";
   item.innerHTML = `
